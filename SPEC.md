@@ -71,5 +71,7 @@ Both the backplate and frame support the same surface options:
 
 ### Sharing
 - Share button generates a compressed URL containing the full project config
-- Opening a share link imports the project and opens the builder
+- Opening a share link loads the project as an unsaved draft — fully viewable and editable
+- A "Save to My Projects" button in the header persists the draft to localStorage
+- Navigating away without saving discards the draft
 - No account or server required — everything is in the URL

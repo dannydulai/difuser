@@ -18,7 +18,7 @@
 - **Wedge blocks**: Each block is a rectangular prism with a flat back and an angled front face (the "cut"). The cut angle (0–45 degrees, in 5-degree steps) and cut direction (random 360-degree rotation) determine the wedge shape. A `minBlockDepth` parameter ensures the thin side is never less than a specified thickness.
 - **Seeded random**: All randomness uses a deterministic PRNG (mulberry32) so that the same seed always produces the same layout. The seed is stored in the project config.
 - **Surface materials**: Blocks, frame, and backplate each have independent material settings. Surface types include Wood (with species + finish), Metal (with color), Brushed Aluminum, and Painted Wood (with color + finish).
-- **Share links**: Project configs are serialized to JSON, compressed with deflate-raw, base64url-encoded, and embedded in a URL query parameter (`?v1=...`). Opening a share link imports the project and opens the builder.
+- **Share links**: Project configs are serialized to JSON, compressed with deflate-raw, base64url-encoded, and embedded in a URL query parameter (`?v1=...`). Opening a share link loads the project as an unsaved draft — viewable and editable but not persisted until the user clicks "Save to My Projects".
 
 ## File Structure
 

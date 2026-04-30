@@ -4,8 +4,10 @@
 
 ```
 Home (/) ──> Builder (/builder/:id) ──> Home
-                │
-Share Link (/share?v1=...) ──> import ──> Builder
+                                          │
+Share Link (/share?v1=...) ──> draft ──> Builder (/builder/draft)
+                                           │
+                                      Save ──> Builder (/builder/:id)
 ```
 
 ### Home View
@@ -16,17 +18,20 @@ Share Link (/share?v1=...) ──> import ──> Builder
 ### Builder View
 - Split layout: 320px sidebar (controls) + remaining space (Three.js viewport)
 - Header bar: back button, project name (editable), total dimensions, block count, share button, brand
-- All config changes auto-save to localStorage via Pinia watcher
+- All config changes auto-save to localStorage via Pinia watcher (except in draft mode)
+- Draft mode (from share links): shows "SHARED" badge + "Save to My Projects" button. Edits are live but not persisted. Saving converts to a real project; navigating away discards
 
 ### Share View
 - Reads `v1` query parameter
 - Decodes and decompresses payload
-- Imports as a new project into the store
-- Redirects to builder
+- Stores as an in-memory draft in Pinia (not persisted to localStorage)
+- Redirects to builder in draft mode (`/builder/draft`)
 
 ## State Management
 
 Single Pinia store (`projects.ts`) holds all projects. A deep watcher serializes the entire project array to `localStorage` on every change. No debouncing — writes are synchronous and fast for the data sizes involved.
+
+A separate `draft` ref holds shared-link projects in memory only. It is not watched by the persistence layer. The store provides `setDraft()`, `saveDraft()` (promotes to a real project), and `clearDraft()` methods. `getProject('draft')` returns the draft if it exists.
 
 ## 3D Rendering Pipeline
 
