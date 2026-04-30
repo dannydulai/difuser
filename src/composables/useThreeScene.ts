@@ -536,5 +536,33 @@ export function useThreeScene(
     if (diffuserGroup) buildDiffuser()
   }, { deep: true })
 
-  return { rebuild: () => { if (diffuserGroup) buildDiffuser() } }
+  function fitToView() {
+    if (!camera || !controls || !config.value) return
+    const c = config.value
+    const scale = 0.01
+    const bw = c.blockWidth * scale
+    const bh = c.blockHeight * scale
+    const gap = c.gap * scale
+    const fw = c.frameWidth * scale
+    const fo = c.frameOffset * scale
+    const hasFrame = c.frameDepth > 0
+
+    const gridW = c.panelCols * bw + (c.panelCols - 1) * gap
+    const gridH = c.panelRows * bh + (c.panelRows - 1) * gap
+    const totalW = hasFrame ? gridW + 2 * fo + 2 * fw : gridW
+    const totalH = hasFrame ? gridH + 2 * fo + 2 * fw : gridH
+
+    const maxDim = Math.max(totalW, totalH)
+    const fov = camera.fov * DEG2RAD
+    const dist = (maxDim / 2) / Math.tan(fov / 2) * 1.3 // 1.3 = padding
+
+    camera.position.set(0, 0, dist)
+    controls.target.set(0, 0, 0)
+    controls.update()
+  }
+
+  return {
+    rebuild: () => { if (diffuserGroup) buildDiffuser() },
+    fitToView,
+  }
 }

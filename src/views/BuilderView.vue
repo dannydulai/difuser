@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectsStore } from '../stores/projects'
 import { useThreeScene } from '../composables/useThreeScene'
@@ -26,7 +26,7 @@ onMounted(() => {
   }
 })
 
-useThreeScene(viewportRef, config as any)
+const { fitToView } = useThreeScene(viewportRef, config as any)
 
 function onUpdate(key: keyof DiffuserConfig, value: any) {
   if (project.value) {
@@ -86,6 +86,18 @@ function saveDraft() {
     router.replace({ name: 'builder', params: { id: saved.id } })
   }
 }
+
+watch(panelOpen, async (open) => {
+  await nextTick()
+  // Wait for CSS transition to settle, then fit camera to visible area
+  setTimeout(() => {
+    fitToView()
+    if (!open) {
+      // Drawer closing — fit again after transition completes
+      setTimeout(() => fitToView(), 320)
+    }
+  }, 50)
+})
 
 function goBack() {
   if (isDraft.value) store.clearDraft()
@@ -180,17 +192,14 @@ function goBack() {
       </aside>
 
       <!-- Mobile panel toggle -->
-      <button class="btn-panel-toggle" :class="{ shifted: panelOpen }" @click="panelOpen = !panelOpen">
+      <button class="btn-panel-toggle" @click="panelOpen = !panelOpen">
         <svg viewBox="0 0 16 16" fill="none">
           <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
         <span>{{ panelOpen ? 'Close' : 'Controls' }}</span>
       </button>
 
-      <!-- Mobile overlay when panel is open -->
-      <div v-if="panelOpen" class="panel-backdrop" @click="panelOpen = false" />
-
-      <main class="viewport" ref="viewportRef" />
+      <main class="viewport" :class="{ 'drawer-open': panelOpen }" ref="viewportRef" />
     </div>
 
     <Teleport to="body">
@@ -413,9 +422,6 @@ function goBack() {
 .btn-panel-toggle {
   display: none;
 }
-.panel-backdrop {
-  display: none;
-}
 
 /* ─── Mobile ─── */
 @media (max-width: 768px) {
@@ -455,21 +461,16 @@ function goBack() {
   }
 
   .sidebar {
-    position: fixed;
-    left: 0;
-    bottom: 0;
     width: 100%;
-    height: 65vh;
+    height: 0;
+    overflow: hidden;
     border-right: none;
     border-top: 1px solid var(--border);
-    z-index: 50;
-    transform: translateY(100%);
-    transition: transform 0.3s ease;
-    border-radius: 16px 16px 0 0;
-    box-shadow: 0 -8px 32px rgba(0,0,0,0.4);
+    transition: height 0.3s ease;
   }
   .sidebar.open {
-    transform: translateY(0);
+    height: 65dvh;
+    overflow: hidden;
   }
 
   .btn-panel-toggle {
@@ -477,7 +478,7 @@ function goBack() {
     align-items: center;
     gap: 6px;
     position: absolute;
-    bottom: 16px;
+    bottom: 12px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 40;
@@ -490,30 +491,19 @@ function goBack() {
     font-size: 13px;
     cursor: pointer;
     box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-    transition: all 0.2s;
-  }
-  .btn-panel-toggle:hover {
-    background: var(--surface-2);
-    color: var(--text-primary);
-  }
-  .btn-panel-toggle.shifted {
-    bottom: calc(65vh + 16px);
   }
   .btn-panel-toggle svg {
     width: 14px;
     height: 14px;
   }
 
-  .panel-backdrop {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.4);
-    z-index: 45;
-  }
-
   .viewport {
     flex: 1;
+    transition: height 0.3s ease;
+  }
+  .viewport.drawer-open {
+    height: 35dvh;
+    flex: none;
   }
 }
 
