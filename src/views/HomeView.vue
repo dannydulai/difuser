@@ -473,4 +473,33 @@ function formatDate(ts: number) {
 .modal-leave-to .modal {
   transform: scale(0.95);
 }
+
+@media (max-width: 768px) {
+  .home {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  .home-header {
+    padding: 24px 20px 0;
+  }
+  .brand-name {
+    font-size: 22px;
+  }
+  .brand-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .home-main {
+    padding: 28px 16px;
+  }
+  .projects-grid {
+    grid-template-columns: 1fr;
+  }
+  .empty-state {
+    padding: 48px 0;
+  }
+  .modal {
+    width: calc(100vw - 32px);
+  }
+}
 </style>

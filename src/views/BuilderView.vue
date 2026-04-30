@@ -69,6 +69,7 @@ const blockCount = computed(() => {
 
 const isDraft = computed(() => props.id === 'draft')
 const showInstructions = ref(false)
+const panelOpen = ref(false)
 
 const shareCopied = ref(false)
 async function shareProject() {
@@ -141,7 +142,7 @@ function goBack() {
         <svg viewBox="0 0 16 16" fill="none">
           <path d="M2 3h12M2 6.5h8M2 10h10M2 13.5h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
         </svg>
-        <span>Instructions</span>
+        <span class="btn-label">Instructions</span>
       </button>
 
       <button class="btn-share" @click="shareProject" :title="shareCopied ? 'Copied!' : 'Copy share link'">
@@ -154,7 +155,7 @@ function goBack() {
         <svg v-else viewBox="0 0 16 16" fill="none">
           <path d="M3 8.5L6.5 12L13 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span>{{ shareCopied ? 'Copied!' : 'Share' }}</span>
+        <span class="btn-label">{{ shareCopied ? 'Copied!' : 'Share' }}</span>
       </button>
 
       <div class="header-brand">
@@ -169,7 +170,7 @@ function goBack() {
     </header>
 
     <div class="builder-body">
-      <aside class="sidebar">
+      <aside class="sidebar" :class="{ open: panelOpen }">
         <ControlPanel
           v-if="config"
           :config="config"
@@ -177,6 +178,18 @@ function goBack() {
           @randomize="randomizeSeed"
         />
       </aside>
+
+      <!-- Mobile panel toggle -->
+      <button class="btn-panel-toggle" :class="{ shifted: panelOpen }" @click="panelOpen = !panelOpen">
+        <svg viewBox="0 0 16 16" fill="none">
+          <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span>{{ panelOpen ? 'Close' : 'Controls' }}</span>
+      </button>
+
+      <!-- Mobile overlay when panel is open -->
+      <div v-if="panelOpen" class="panel-backdrop" @click="panelOpen = false" />
+
       <main class="viewport" ref="viewportRef" />
     </div>
 
@@ -193,6 +206,7 @@ function goBack() {
 <style scoped>
 .builder {
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -376,6 +390,7 @@ function goBack() {
   display: flex;
   flex: 1;
   overflow: hidden;
+  position: relative;
 }
 .sidebar {
   width: 320px;
@@ -392,5 +407,128 @@ function goBack() {
 }
 .viewport canvas {
   display: block;
+}
+
+/* Mobile panel toggle — hidden on desktop */
+.btn-panel-toggle {
+  display: none;
+}
+.panel-backdrop {
+  display: none;
+}
+
+/* ─── Mobile ─── */
+@media (max-width: 768px) {
+  .builder-header {
+    gap: 8px;
+    padding: 0 10px;
+    height: 44px;
+  }
+  .header-stats {
+    display: none;
+  }
+  .header-brand {
+    gap: 6px;
+  }
+  .brand-mark {
+    display: none;
+  }
+  .btn-label {
+    display: none;
+  }
+  .btn-instructions,
+  .btn-share {
+    padding: 5px 7px;
+  }
+  .btn-save span {
+    display: none;
+  }
+  .btn-save {
+    padding: 5px 8px;
+  }
+  .name-edit-input {
+    width: 140px;
+  }
+
+  .builder-body {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 65vh;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    z-index: 50;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.4);
+  }
+  .sidebar.open {
+    transform: translateY(0);
+  }
+
+  .btn-panel-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-secondary);
+    padding: 8px 16px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    transition: all 0.2s;
+  }
+  .btn-panel-toggle:hover {
+    background: var(--surface-2);
+    color: var(--text-primary);
+  }
+  .btn-panel-toggle.shifted {
+    bottom: calc(65vh + 16px);
+  }
+  .btn-panel-toggle svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .panel-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 45;
+  }
+
+  .viewport {
+    flex: 1;
+  }
+}
+
+@media (max-width: 400px) {
+  .builder-header {
+    gap: 6px;
+    padding: 0 8px;
+  }
+  .project-name {
+    font-size: 13px;
+    max-width: 100px;
+  }
+  .btn-back {
+    width: 28px;
+    height: 28px;
+  }
 }
 </style>
