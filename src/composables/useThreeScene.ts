@@ -1,6 +1,13 @@
 import { onMounted, onBeforeUnmount, watch, type Ref } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js'
+
+import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js'
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import type { DiffuserConfig, SurfaceType, WoodType, Finish } from '../types'
 import { WOOD_COLORS } from '../types'
 import { createSeededRandom, seededRandomInRange } from './useSeededRandom'
@@ -81,52 +88,69 @@ function createWedgeGeometry(
 
 function finishToRoughness(finish: Finish): number {
   switch (finish) {
-    case 'Gloss': return 0.1
-    case 'Satin': return 0.3
-    case 'Matte': return 0.6
-    case 'Natural': return 0.8
+    case 'Gloss': return 0.08
+    case 'Satin': return 0.25
+    case 'Matte': return 0.55
+    case 'Natural': return 0.75
     default: return 0.5
   }
 }
 
-/**
- * Builds a MeshStandardMaterial from the unified surface config.
- */
+function finishToClearcoat(finish: Finish): number {
+  switch (finish) {
+    case 'Gloss': return 0.8
+    case 'Satin': return 0.4
+    case 'Matte': return 0.0
+    case 'Natural': return 0.05
+    default: return 0.0
+  }
+}
+
 function buildSurfaceMaterial(
   surfaceType: SurfaceType,
   woodType: WoodType,
   finish: Finish,
   color: string
-): THREE.MeshStandardMaterial {
+): THREE.MeshPhysicalMaterial {
   switch (surfaceType) {
     case 'Wood': {
       const wc = WOOD_COLORS[woodType]
-      return new THREE.MeshStandardMaterial({
+      return new THREE.MeshPhysicalMaterial({
         color: new THREE.Color(wc.base),
         roughness: finishToRoughness(finish),
-        metalness: 0.05,
+        metalness: 0.0,
+        clearcoat: finishToClearcoat(finish),
+        clearcoatRoughness: 0.3,
+        sheen: 0.3,
+        sheenRoughness: 0.6,
+        sheenColor: new THREE.Color(wc.grain),
       })
     }
     case 'Metal':
-      return new THREE.MeshStandardMaterial({
+      return new THREE.MeshPhysicalMaterial({
         color: new THREE.Color(color),
-        roughness: 0.3,
-        metalness: 0.85,
+        roughness: 0.25,
+        metalness: 0.9,
+        clearcoat: 0.1,
+        clearcoatRoughness: 0.2,
       })
     case 'Brushed Aluminum':
-      return new THREE.MeshStandardMaterial({
+      return new THREE.MeshPhysicalMaterial({
         color: new THREE.Color('#c0c0c0'),
-        roughness: 0.4,
+        roughness: 0.35,
         metalness: 0.95,
+        anisotropy: 0.8,
       })
     case 'Painted Wood':
-      return new THREE.MeshStandardMaterial({
+      return new THREE.MeshPhysicalMaterial({
         color: new THREE.Color(color),
         roughness: finishToRoughness(finish),
-        metalness: 0.02,
+        metalness: 0.0,
+        clearcoat: finishToClearcoat(finish),
+        clearcoatRoughness: 0.15,
       })
     default:
-      return new THREE.MeshStandardMaterial({ color: new THREE.Color(color) })
+      return new THREE.MeshPhysicalMaterial({ color: new THREE.Color(color) })
   }
 }
 
@@ -138,9 +162,12 @@ export function useThreeScene(
   let scene: THREE.Scene
   let camera: THREE.PerspectiveCamera
   let controls: OrbitControls
+  let composer: EffectComposer
+  let gtaoPass: GTAOPass
   let animationId: number
   let diffuserGroup: THREE.Group
   let resizeObserver: ResizeObserver
+  let envMap: THREE.Texture
 
   function buildDiffuser() {
     while (diffuserGroup.children.length) {
@@ -178,14 +205,13 @@ export function useThreeScene(
 
     const rng = createSeededRandom(c.randomSeed)
     const blockRoughness = finishToRoughness(c.blockFinish)
+    const blockClearcoat = finishToClearcoat(c.blockFinish)
     const woodColors = WOOD_COLORS[c.blockMaterial]
 
-    // Precompute gradient palette if needed
     const totalBlocks = rows * cols
     const gradSteps = Math.max(2, c.gradientSteps)
-    const gradDither = c.gradientDither / 100 // normalize 0–1
+    const gradDither = c.gradientDither / 100
 
-    // Build blocks
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
         const cutAngle = seededRandomInRange(rng, c.minAngle, c.maxAngle, 5)
@@ -198,19 +224,13 @@ export function useThreeScene(
             blockColor = new THREE.Color(c.blockColor)
             break
           case 'Gradient': {
-            // Linear position across grid
             let t = (row * cols + col) / (totalBlocks - 1 || 1)
-
-            // Apply dither: random offset to t
             if (gradDither > 0) {
               t += (rng() - 0.5) * gradDither
               t = Math.max(0, Math.min(1, t))
             }
-
-            // Quantize to steps
             const stepIndex = Math.round(t * (gradSteps - 1))
             const quantized = stepIndex / (gradSteps - 1)
-
             blockColor = new THREE.Color(c.blockColor).lerp(
               new THREE.Color(c.blockColorSecondary),
               quantized
@@ -231,10 +251,18 @@ export function useThreeScene(
           }
         }
 
-        const mat = new THREE.MeshStandardMaterial({
+        const mat = new THREE.MeshPhysicalMaterial({
           color: blockColor,
           roughness: blockRoughness,
-          metalness: 0.05,
+          metalness: 0.0,
+          clearcoat: blockClearcoat,
+          clearcoatRoughness: 0.3,
+          sheen: c.colorMode === 'Natural wood' ? 0.3 : 0.0,
+          sheenRoughness: 0.6,
+          sheenColor: c.colorMode === 'Natural wood'
+            ? new THREE.Color(woodColors.grain)
+            : undefined,
+          envMapIntensity: 0.3,
         })
 
         const geo = createWedgeGeometry(bw, bh, minBd, cutAngle, cutRotation)
@@ -255,25 +283,40 @@ export function useThreeScene(
       const frameMat = buildSurfaceMaterial(
         c.frameSurfaceType, c.frameWoodType, c.frameFinish, c.frameColor
       )
+      frameMat.envMapIntensity = 0.08
 
       const totalW = gridW + 2 * fo + 2 * fw
       const totalH = gridH + 2 * fo + 2 * fw
 
-      const sides = [
-        { w: totalW, h: fw, x: 0, y: -(totalH / 2 - fw / 2) },
-        { w: totalW, h: fw, x: 0, y: totalH / 2 - fw / 2 },
-        { w: fw, h: totalH - 2 * fw, x: -(totalW / 2 - fw / 2), y: 0 },
-        { w: fw, h: totalH - 2 * fw, x: totalW / 2 - fw / 2, y: 0 },
-      ]
+      // Single extruded shape — no corner seams
+      const outerW = totalW / 2
+      const outerH = totalH / 2
+      const innerW = outerW - fw
+      const innerH = outerH - fw
 
-      for (const s of sides) {
-        const geo = new THREE.BoxGeometry(s.w, s.h, fd)
-        const mesh = new THREE.Mesh(geo, frameMat)
-        mesh.position.set(s.x, s.y, fd / 2)
-        mesh.castShadow = true
-        mesh.receiveShadow = true
-        diffuserGroup.add(mesh)
-      }
+      const frameShape = new THREE.Shape()
+      frameShape.moveTo(-outerW, -outerH)
+      frameShape.lineTo(outerW, -outerH)
+      frameShape.lineTo(outerW, outerH)
+      frameShape.lineTo(-outerW, outerH)
+      frameShape.closePath()
+
+      const hole = new THREE.Path()
+      hole.moveTo(-innerW, -innerH)
+      hole.lineTo(innerW, -innerH)
+      hole.lineTo(innerW, innerH)
+      hole.lineTo(-innerW, innerH)
+      hole.closePath()
+      frameShape.holes.push(hole)
+
+      const frameGeo = new THREE.ExtrudeGeometry(frameShape, {
+        depth: fd,
+        bevelEnabled: false,
+      })
+      const frameMesh = new THREE.Mesh(frameGeo, frameMat)
+      frameMesh.castShadow = true
+      frameMesh.receiveShadow = true
+      diffuserGroup.add(frameMesh)
     }
 
     // Backplate
@@ -282,6 +325,7 @@ export function useThreeScene(
     const backMat = buildSurfaceMaterial(
       c.backplateSurfaceType, c.backplateWoodType, c.backplateFinish, c.backplateColor
     )
+    backMat.envMapIntensity = 0.05
     const backGeo = new THREE.BoxGeometry(bpW, bpH, 0.02)
     const backMesh = new THREE.Mesh(backGeo, backMat)
     backMesh.position.set(0, 0, 0.01)
@@ -292,23 +336,36 @@ export function useThreeScene(
   function init() {
     const container = containerRef.value!
     const rect = container.getBoundingClientRect()
+    const w = rect.width
+    const h = rect.height
 
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
+    // Renderer
+    renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: 'high-performance' })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setSize(rect.width, rect.height)
+    renderer.setSize(w, h)
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.2
+    renderer.toneMappingExposure = 0.8
     container.appendChild(renderer.domElement)
 
+    // Scene
     scene = new THREE.Scene()
-    scene.background = new THREE.Color('#1a1a1e')
-    scene.fog = new THREE.FogExp2('#1a1a1e', 0.08)
+    scene.background = new THREE.Color('#18181b')
 
-    camera = new THREE.PerspectiveCamera(40, rect.width / rect.height, 0.1, 100)
+    // Environment map — procedural studio HDRI for realistic reflections
+    const pmremGenerator = new THREE.PMREMGenerator(renderer)
+    pmremGenerator.compileEquirectangularShader()
+    const roomEnv = new RoomEnvironment()
+    envMap = pmremGenerator.fromScene(roomEnv, 0.04).texture
+    scene.environment = envMap
+    pmremGenerator.dispose()
+
+    // Camera
+    camera = new THREE.PerspectiveCamera(35, w / h, 0.1, 100)
     camera.position.set(0, 0, 14)
 
+    // Controls
     controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping = true
     controls.dampingFactor = 0.08
@@ -316,10 +373,8 @@ export function useThreeScene(
     controls.maxDistance = 30
     controls.target.set(0, 0, 0)
 
-    const ambientLight = new THREE.AmbientLight('#ffffff', 0.4)
-    scene.add(ambientLight)
-
-    const keyLight = new THREE.DirectionalLight('#fff5e6', 1.8)
+    // Lighting — key + fill + rim, environment map handles ambient
+    const keyLight = new THREE.DirectionalLight('#fff5e6', 1.2)
     keyLight.position.set(5, 8, 10)
     keyLight.castShadow = true
     keyLight.shadow.mapSize.width = 2048
@@ -330,41 +385,85 @@ export function useThreeScene(
     keyLight.shadow.camera.right = 10
     keyLight.shadow.camera.top = 10
     keyLight.shadow.camera.bottom = -10
-    keyLight.shadow.bias = -0.001
+    keyLight.shadow.bias = -0.0005
+    keyLight.shadow.normalBias = 0.02
     scene.add(keyLight)
 
-    const fillLight = new THREE.DirectionalLight('#b8c4ff', 0.5)
-    fillLight.position.set(-4, 3, 5)
+    const fillLight = new THREE.DirectionalLight('#b8c4ff', 0.4)
+    fillLight.position.set(-6, 4, 8)
     scene.add(fillLight)
 
-    const rimLight = new THREE.DirectionalLight('#ffd4a3', 0.6)
-    rimLight.position.set(0, -2, -8)
+    const rimLight = new THREE.DirectionalLight('#ffd4a3', 0.3)
+    rimLight.position.set(0, -3, -8)
     scene.add(rimLight)
 
+    // Ground plane for shadow catching
     const groundGeo = new THREE.PlaneGeometry(40, 40)
-    const groundMat = new THREE.ShadowMaterial({ opacity: 0.3 })
+    const groundMat = new THREE.ShadowMaterial({ opacity: 0.25 })
     const ground = new THREE.Mesh(groundGeo, groundMat)
     ground.position.z = -0.5
     ground.receiveShadow = true
     scene.add(ground)
 
+    // Diffuser group
     diffuserGroup = new THREE.Group()
     scene.add(diffuserGroup)
 
+    // Post-processing pipeline
+    composer = new EffectComposer(renderer)
+
+    const renderPass = new RenderPass(scene, camera)
+    composer.addPass(renderPass)
+
+    // GTAO (Ground Truth Ambient Occlusion) — better than SSAO
+    gtaoPass = new GTAOPass(scene, camera, w, h)
+    gtaoPass.output = GTAOPass.OUTPUT.Default
+    // @ts-ignore — three.js typing gaps
+    gtaoPass.updateGtaoMaterial({
+      radius: 0.3,
+      distanceExponent: 2.0,
+      thickness: 2.0,
+      scale: 1.0,
+      samples: 16,
+    })
+    // @ts-ignore
+    gtaoPass.updatePdMaterial({
+      lumaPhi: 10,
+      depthPhi: 2,
+      normalPhi: 3,
+      radius: 4,
+      rings: 4,
+      samples: 16,
+    })
+    composer.addPass(gtaoPass)
+
+    // SMAA anti-aliasing (since we disabled renderer AA for composer)
+    const smaaPass = new SMAAPass()
+    composer.addPass(smaaPass)
+
+    // Output pass for tone mapping
+    const outputPass = new OutputPass()
+    composer.addPass(outputPass)
+
     buildDiffuser()
 
+    // Resize handling
     resizeObserver = new ResizeObserver(() => {
       const r = container.getBoundingClientRect()
-      camera.aspect = r.width / r.height
+      const rw = r.width
+      const rh = r.height
+      camera.aspect = rw / rh
       camera.updateProjectionMatrix()
-      renderer.setSize(r.width, r.height)
+      renderer.setSize(rw, rh)
+      composer.setSize(rw, rh)
     })
     resizeObserver.observe(container)
 
+    // Render loop
     function animate() {
       animationId = requestAnimationFrame(animate)
       controls.update()
-      renderer.render(scene, camera)
+      composer.render()
     }
     animate()
   }
@@ -378,6 +477,7 @@ export function useThreeScene(
     resizeObserver?.disconnect()
     controls?.dispose()
     renderer?.dispose()
+    composer?.dispose()
   })
 
   watch(config, () => {
