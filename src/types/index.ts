@@ -1,6 +1,6 @@
 export type WoodType = 'Oak' | 'Walnut' | 'Maple' | 'Cherry' | 'Birch' | 'Pine'
 export type Finish = 'Natural' | 'Matte' | 'Satin' | 'Gloss'
-export type ColorMode = 'Natural wood' | 'Solid color' | 'Gradient' | 'Random'
+export type ColorMode = 'Natural wood' | 'Solid color' | 'Gradient'
 export type SurfaceType = 'Wood' | 'Metal' | 'Brushed Aluminum' | 'Painted Wood'
 
 export interface DiffuserConfig {
@@ -24,8 +24,9 @@ export interface DiffuserConfig {
   blockMaterial: WoodType
   blockFinish: Finish
   colorMode: ColorMode
-  blockColor: string
-  blockColorSecondary: string
+  solidColor: string
+  gradientStart: string
+  gradientEnd: string
   gradientSteps: number
   gradientDither: number
 
@@ -69,10 +70,11 @@ export const DEFAULT_CONFIG: DiffuserConfig = {
   blockMaterial: 'Oak',
   blockFinish: 'Natural',
   colorMode: 'Natural wood',
-  blockColor: '#b5874d',
-  blockColorSecondary: '#8b5e3c',
+  solidColor: '#622f75',
+  gradientStart: '#a3a3a3',
+  gradientEnd: '#248dc2',
   gradientSteps: 8,
-  gradientDither: 0,
+  gradientDither: 30,
   frameSurfaceType: 'Wood',
   frameWoodType: 'Walnut',
   frameFinish: 'Satin',

@@ -37,8 +37,9 @@ const randomSeed = field('randomSeed')
 const blockMaterial = field('blockMaterial')
 const blockFinish = field('blockFinish')
 const colorMode = field('colorMode')
-const blockColor = field('blockColor')
-const blockColorSecondary = field('blockColorSecondary')
+const solidColor = field('solidColor')
+const gradientStart = field('gradientStart')
+const gradientEnd = field('gradientEnd')
 const gradientSteps = field('gradientSteps')
 const gradientDither = field('gradientDither')
 const frameWidth = field('frameWidth')
@@ -71,7 +72,7 @@ watch(maxAngle, (val) => {
 
 const woodTypes = ['Oak', 'Walnut', 'Maple', 'Cherry', 'Birch', 'Pine']
 const finishes = ['Natural', 'Matte', 'Satin', 'Gloss']
-const colorModes = ['Natural wood', 'Solid color', 'Gradient', 'Random']
+const colorModes = ['Natural wood', 'Solid color', 'Gradient']
 
 const frameDepthMax = computed(() => 200 + props.config.minBlockDepth)
 </script>
@@ -128,11 +129,11 @@ const frameDepthMax = computed(() => 200 + props.config.minBlockDepth)
       <SelectInput v-model="blockFinish" label="Finish" :options="finishes" />
       <SelectInput v-model="colorMode" label="Color Mode" :options="colorModes" />
       <template v-if="colorMode === 'Solid color'">
-        <ColorInput v-model="blockColor" label="Block Color" />
+        <ColorInput v-model="solidColor" label="Block Color" />
       </template>
       <template v-if="colorMode === 'Gradient'">
-        <ColorInput v-model="blockColor" label="Start Color" />
-        <ColorInput v-model="blockColorSecondary" label="End Color" />
+        <ColorInput v-model="gradientStart" label="Start Color" />
+        <ColorInput v-model="gradientEnd" label="End Color" />
         <SliderInput v-model="gradientSteps" label="Steps" :min="2" :max="40" />
         <SliderInput v-model="gradientDither" label="Dither" :min="0" :max="100" suffix="%" />
       </template>

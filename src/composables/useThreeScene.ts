@@ -11,6 +11,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import type { DiffuserConfig, SurfaceType, WoodType, Finish } from '../types'
 import { WOOD_COLORS } from '../types'
 import { createSeededRandom, seededRandomInRange } from './useSeededRandom'
+import { generateWoodTextures, generateBrushedAluminumTextures } from './useTextures'
 
 const DEG2RAD = Math.PI / 180
 
@@ -106,6 +107,24 @@ function finishToClearcoat(finish: Finish): number {
   }
 }
 
+// Texture cache — keyed by wood type or material name
+const woodTextureCache = new Map<string, ReturnType<typeof generateWoodTextures>>()
+let brushedAlumCache: ReturnType<typeof generateBrushedAluminumTextures> | null = null
+
+function getWoodTextures(woodType: WoodType) {
+  if (!woodTextureCache.has(woodType)) {
+    woodTextureCache.set(woodType, generateWoodTextures(WOOD_COLORS[woodType]))
+  }
+  return woodTextureCache.get(woodType)!
+}
+
+function getBrushedAluminumTextures() {
+  if (!brushedAlumCache) {
+    brushedAlumCache = generateBrushedAluminumTextures()
+  }
+  return brushedAlumCache
+}
+
 function buildSurfaceMaterial(
   surfaceType: SurfaceType,
   woodType: WoodType,
@@ -114,16 +133,19 @@ function buildSurfaceMaterial(
 ): THREE.MeshPhysicalMaterial {
   switch (surfaceType) {
     case 'Wood': {
-      const wc = WOOD_COLORS[woodType]
+      const tex = getWoodTextures(woodType)
       return new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color(wc.base),
+        map: tex.map,
+        normalMap: tex.normalMap,
+        normalScale: new THREE.Vector2(0.3, 0.3),
+        roughnessMap: tex.roughnessMap,
         roughness: finishToRoughness(finish),
         metalness: 0.0,
         clearcoat: finishToClearcoat(finish),
         clearcoatRoughness: 0.3,
         sheen: 0.3,
         sheenRoughness: 0.6,
-        sheenColor: new THREE.Color(wc.grain),
+        sheenColor: new THREE.Color(WOOD_COLORS[woodType].grain),
       })
     }
     case 'Metal':
@@ -134,13 +156,18 @@ function buildSurfaceMaterial(
         clearcoat: 0.1,
         clearcoatRoughness: 0.2,
       })
-    case 'Brushed Aluminum':
+    case 'Brushed Aluminum': {
+      const tex = getBrushedAluminumTextures()
       return new THREE.MeshPhysicalMaterial({
         color: new THREE.Color('#c0c0c0'),
+        normalMap: tex.normalMap,
+        normalScale: new THREE.Vector2(0.5, 0.5),
+        roughnessMap: tex.roughnessMap,
         roughness: 0.35,
         metalness: 0.95,
         anisotropy: 0.8,
       })
+    }
     case 'Painted Wood':
       return new THREE.MeshPhysicalMaterial({
         color: new THREE.Color(color),
@@ -207,6 +234,7 @@ export function useThreeScene(
     const blockRoughness = finishToRoughness(c.blockFinish)
     const blockClearcoat = finishToClearcoat(c.blockFinish)
     const woodColors = WOOD_COLORS[c.blockMaterial]
+    const blockWoodTex = c.colorMode === 'Natural wood' ? getWoodTextures(c.blockMaterial) : null
 
     const totalBlocks = rows * cols
     const gradSteps = Math.max(2, c.gradientSteps)
@@ -221,7 +249,7 @@ export function useThreeScene(
 
         switch (c.colorMode) {
           case 'Solid color':
-            blockColor = new THREE.Color(c.blockColor)
+            blockColor = new THREE.Color(c.solidColor)
             break
           case 'Gradient': {
             let t = (row * cols + col) / (totalBlocks - 1 || 1)
@@ -231,15 +259,10 @@ export function useThreeScene(
             }
             const stepIndex = Math.round(t * (gradSteps - 1))
             const quantized = stepIndex / (gradSteps - 1)
-            blockColor = new THREE.Color(c.blockColor).lerp(
-              new THREE.Color(c.blockColorSecondary),
+            blockColor = new THREE.Color(c.gradientStart).lerp(
+              new THREE.Color(c.gradientEnd),
               quantized
             )
-            break
-          }
-          case 'Random': {
-            const hue = rng()
-            blockColor = new THREE.Color().setHSL(hue, 0.5, 0.5)
             break
           }
           default: {
@@ -257,12 +280,16 @@ export function useThreeScene(
           metalness: 0.0,
           clearcoat: blockClearcoat,
           clearcoatRoughness: 0.3,
-          sheen: c.colorMode === 'Natural wood' ? 0.3 : 0.0,
-          sheenRoughness: 0.6,
-          sheenColor: c.colorMode === 'Natural wood'
-            ? new THREE.Color(woodColors.grain)
-            : undefined,
           envMapIntensity: 0.3,
+          ...(blockWoodTex ? {
+            map: blockWoodTex.map,
+            normalMap: blockWoodTex.normalMap,
+            normalScale: new THREE.Vector2(0.25, 0.25),
+            roughnessMap: blockWoodTex.roughnessMap,
+            sheen: 0.3,
+            sheenRoughness: 0.6,
+            sheenColor: new THREE.Color(woodColors.grain),
+          } : {}),
         })
 
         const geo = createWedgeGeometry(bw, bh, minBd, cutAngle, cutRotation)
