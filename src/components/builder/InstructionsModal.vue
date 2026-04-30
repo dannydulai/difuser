@@ -50,16 +50,13 @@ const angledPairs = computed(() => cutList.value.totalPairs - cutList.value.flat
           <p class="step-desc">
             All pieces are
             <strong>{{ cutList.blockWidth }} &times; {{ cutList.blockHeight }}mm</strong>
-            in footprint. Cut to the depth listed for each angle group.
+            in footprint. Cut to the lengths below.
           </p>
 
           <div class="cut-cards">
             <div v-for="group in cutList.angleGroups" :key="group.angle" class="cut-card">
-              <div class="cut-card-angle">{{ group.angle }}°</div>
-              <div class="cut-card-details">
-                <span class="cut-card-count">{{ group.pairCount }} piece{{ group.pairCount > 1 ? 's' : '' }}</span>
-                <span class="cut-card-dim">{{ cutList.blockWidth }} &times; {{ cutList.blockHeight }} &times; {{ group.stockDepth }}mm</span>
-              </div>
+              <div class="cut-card-qty">{{ group.pairCount }}&times;</div>
+              <div class="cut-card-length">{{ group.stockDepth }}mm</div>
             </div>
           </div>
         </section>
@@ -87,11 +84,8 @@ const angledPairs = computed(() => cutList.value.totalPairs - cutList.value.flat
               :key="group.angle"
               class="cut-card"
             >
-              <div class="cut-card-angle">{{ group.angle }}°</div>
-              <div class="cut-card-details">
-                <span class="cut-card-count">{{ group.pairCount }} cut{{ group.pairCount > 1 ? 's' : '' }}</span>
-                <span class="cut-card-dim">&rarr; {{ group.blockCount }} blocks</span>
-              </div>
+              <div class="cut-card-qty">{{ group.pairCount }}&times;</div>
+              <div class="cut-card-length">{{ group.angle }}°</div>
             </div>
           </div>
         </section>
@@ -263,25 +257,24 @@ const angledPairs = computed(() => cutList.value.totalPairs - cutList.value.flat
   min-width: 180px;
   flex: 1;
 }
-.cut-card-angle {
+.cut-card-qty {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 500;
   color: var(--accent);
-  min-width: 40px;
 }
-.cut-card-details {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+.cut-card-length {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  color: var(--text-primary);
 }
-.cut-card-count {
+.cut-card-detail {
   font-family: 'Outfit', sans-serif;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
 }
-.cut-card-dim {
+.cut-card-sub {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   color: var(--text-muted);
