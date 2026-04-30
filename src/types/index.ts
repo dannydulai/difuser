@@ -1,6 +1,7 @@
 export type WoodType = 'Oak' | 'Walnut' | 'Maple' | 'Cherry' | 'Birch' | 'Pine'
 export type Finish = 'Natural' | 'Matte' | 'Satin' | 'Gloss'
 export type ColorMode = 'Natural wood' | 'Solid color' | 'Gradient'
+export type WoodColorMode = 'Natural wood' | 'Solid color'
 export type SurfaceType = 'Wood' | 'Metal' | 'Brushed Aluminum' | 'Painted Wood'
 
 export interface DiffuserConfig {
@@ -33,12 +34,16 @@ export interface DiffuserConfig {
   // Frame surface
   frameSurfaceType: SurfaceType
   frameWoodType: WoodType
+  frameWoodColorMode: WoodColorMode
+  frameWoodColor: string
   frameFinish: Finish
   frameColor: string
 
   // Backplate surface
   backplateSurfaceType: SurfaceType
   backplateWoodType: WoodType
+  backplateWoodColorMode: WoodColorMode
+  backplateWoodColor: string
   backplateFinish: Finish
   backplateColor: string
 
@@ -77,10 +82,14 @@ export const DEFAULT_CONFIG: DiffuserConfig = {
   gradientDither: 30,
   frameSurfaceType: 'Wood',
   frameWoodType: 'Walnut',
+  frameWoodColorMode: 'Natural wood',
+  frameWoodColor: '#5c4033',
   frameFinish: 'Satin',
   frameColor: '#3d2b1f',
   backplateSurfaceType: 'Wood',
   backplateWoodType: 'Walnut',
+  backplateWoodColorMode: 'Natural wood',
+  backplateWoodColor: '#5c4033',
   backplateFinish: 'Natural',
   backplateColor: '#2a1f15',
   frameWidth: 20,

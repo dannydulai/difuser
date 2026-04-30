@@ -126,8 +126,7 @@ const frameDepthMax = computed(() => 200 + props.config.minBlockDepth)
 
     <SectionCollapsible title="Block Materials">
       <SelectInput v-model="blockMaterial" label="Wood Type" :options="woodTypes" />
-      <SelectInput v-model="blockFinish" label="Finish" :options="finishes" />
-      <SelectInput v-model="colorMode" label="Color Mode" :options="colorModes" />
+      <SelectInput v-model="colorMode" label="Color" :options="colorModes" />
       <template v-if="colorMode === 'Solid color'">
         <ColorInput v-model="solidColor" label="Block Color" />
       </template>
@@ -137,16 +136,21 @@ const frameDepthMax = computed(() => 200 + props.config.minBlockDepth)
         <SliderInput v-model="gradientSteps" label="Steps" :min="2" :max="40" />
         <SliderInput v-model="gradientDither" label="Dither" :min="0" :max="100" suffix="%" />
       </template>
+      <SelectInput v-model="blockFinish" label="Finish" :options="finishes" />
     </SectionCollapsible>
 
     <SectionCollapsible title="Backplate">
       <SurfaceMaterialInput
         :surface-type="config.backplateSurfaceType"
         :wood-type="config.backplateWoodType"
+        :wood-color-mode="config.backplateWoodColorMode"
+        :wood-color="config.backplateWoodColor"
         :finish="config.backplateFinish"
         :color="config.backplateColor"
         @update:surface-type="set('backplateSurfaceType', $event)"
         @update:wood-type="set('backplateWoodType', $event)"
+        @update:wood-color-mode="set('backplateWoodColorMode', $event)"
+        @update:wood-color="set('backplateWoodColor', $event)"
         @update:finish="set('backplateFinish', $event)"
         @update:color="set('backplateColor', $event)"
       />
@@ -160,10 +164,14 @@ const frameDepthMax = computed(() => 200 + props.config.minBlockDepth)
         <SurfaceMaterialInput
           :surface-type="config.frameSurfaceType"
           :wood-type="config.frameWoodType"
+          :wood-color-mode="config.frameWoodColorMode"
+          :wood-color="config.frameWoodColor"
           :finish="config.frameFinish"
           :color="config.frameColor"
           @update:surface-type="set('frameSurfaceType', $event)"
           @update:wood-type="set('frameWoodType', $event)"
+          @update:wood-color-mode="set('frameWoodColorMode', $event)"
+          @update:wood-color="set('frameWoodColor', $event)"
           @update:finish="set('frameFinish', $event)"
           @update:color="set('frameColor', $event)"
         />

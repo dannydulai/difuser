@@ -47,12 +47,17 @@ function createWedgeGeometry(
   const positions: number[] = []
   const indices: number[] = []
   const normals: number[] = []
+  const uvs: number[] = []
 
   function addFace(
     p0: [number, number, number],
     p1: [number, number, number],
     p2: [number, number, number],
-    p3: [number, number, number]
+    p3: [number, number, number],
+    uv0: [number, number],
+    uv1: [number, number],
+    uv2: [number, number],
+    uv3: [number, number]
   ) {
     const base = positions.length / 3
     const e1 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]]
@@ -63,9 +68,12 @@ function createWedgeGeometry(
     const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1
     const fnx = nx / len, fny = ny / len, fnz = nz / len
 
-    for (const p of [p0, p1, p2, p3]) {
-      positions.push(p[0], p[1], p[2])
+    const pts = [p0, p1, p2, p3]
+    const uvPts = [uv0, uv1, uv2, uv3]
+    for (let i = 0; i < 4; i++) {
+      positions.push(pts[i][0], pts[i][1], pts[i][2])
       normals.push(fnx, fny, fnz)
+      uvs.push(uvPts[i][0], uvPts[i][1])
     }
     indices.push(base, base + 1, base + 2, base, base + 2, base + 3)
   }
@@ -73,16 +81,29 @@ function createWedgeGeometry(
   const bc: [number, number, number][] = corners.map(([cx, cy]) => [cx, cy, 0])
   const fc: [number, number, number][] = corners.map(([cx, cy], i) => [cx, cy, frontZ[i]])
 
-  addFace(bc[3], bc[2], bc[1], bc[0])
-  addFace(fc[0], fc[1], fc[2], fc[3])
-  addFace(bc[0], bc[1], fc[1], fc[0])
-  addFace(bc[1], bc[2], fc[2], fc[1])
-  addFace(bc[2], bc[3], fc[3], fc[2])
-  addFace(bc[3], bc[0], fc[0], fc[3])
+  // UV corners: map XY footprint to 0..1
+  const uvBL: [number, number] = [0, 0]
+  const uvBR: [number, number] = [1, 0]
+  const uvTR: [number, number] = [1, 1]
+  const uvTL: [number, number] = [0, 1]
+
+  // Back face
+  addFace(bc[3], bc[2], bc[1], bc[0], uvTL, uvTR, uvBR, uvBL)
+  // Front face (the angled cut — most visible)
+  addFace(fc[0], fc[1], fc[2], fc[3], uvBL, uvBR, uvTR, uvTL)
+  // Bottom side (y = -halfH)
+  addFace(bc[0], bc[1], fc[1], fc[0], [0,0], [1,0], [1,1], [0,1])
+  // Right side (x = halfW)
+  addFace(bc[1], bc[2], fc[2], fc[1], [0,0], [1,0], [1,1], [0,1])
+  // Top side (y = halfH)
+  addFace(bc[2], bc[3], fc[3], fc[2], [0,0], [1,0], [1,1], [0,1])
+  // Left side (x = -halfW)
+  addFace(bc[3], bc[0], fc[0], fc[3], [0,0], [1,0], [1,1], [0,1])
 
   const geo = new THREE.BufferGeometry()
   geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
   geo.setIndex(indices)
   return geo
 }
@@ -129,13 +150,19 @@ function buildSurfaceMaterial(
   surfaceType: SurfaceType,
   woodType: WoodType,
   finish: Finish,
-  color: string
+  color: string,
+  woodColorMode: 'Natural wood' | 'Solid color' = 'Natural wood',
+  woodColor?: string
 ): THREE.MeshPhysicalMaterial {
   switch (surfaceType) {
     case 'Wood': {
       const tex = getWoodTextures(woodType)
+      const useSolidColor = woodColorMode === 'Solid color' && woodColor
       return new THREE.MeshPhysicalMaterial({
-        map: tex.map,
+        ...(useSolidColor
+          ? { color: new THREE.Color(woodColor) }
+          : { map: tex.map }
+        ),
         normalMap: tex.normalMap,
         normalScale: new THREE.Vector2(0.3, 0.3),
         roughnessMap: tex.roughnessMap,
@@ -145,7 +172,9 @@ function buildSurfaceMaterial(
         clearcoatRoughness: 0.3,
         sheen: 0.3,
         sheenRoughness: 0.6,
-        sheenColor: new THREE.Color(WOOD_COLORS[woodType].grain),
+        sheenColor: useSolidColor
+          ? new THREE.Color(woodColor).multiplyScalar(0.7)
+          : new THREE.Color(WOOD_COLORS[woodType].grain),
       })
     }
     case 'Metal':
@@ -308,7 +337,8 @@ export function useThreeScene(
     // Frame
     if (hasFrame) {
       const frameMat = buildSurfaceMaterial(
-        c.frameSurfaceType, c.frameWoodType, c.frameFinish, c.frameColor
+        c.frameSurfaceType, c.frameWoodType, c.frameFinish, c.frameColor,
+        c.frameWoodColorMode, c.frameWoodColor
       )
       frameMat.envMapIntensity = 0.08
 
@@ -350,7 +380,8 @@ export function useThreeScene(
     const bpW = hasFrame ? gridW + 2 * fo : gridW
     const bpH = hasFrame ? gridH + 2 * fo : gridH
     const backMat = buildSurfaceMaterial(
-      c.backplateSurfaceType, c.backplateWoodType, c.backplateFinish, c.backplateColor
+      c.backplateSurfaceType, c.backplateWoodType, c.backplateFinish, c.backplateColor,
+      c.backplateWoodColorMode, c.backplateWoodColor
     )
     backMat.envMapIntensity = 0.05
     const backGeo = new THREE.BoxGeometry(bpW, bpH, 0.02)
