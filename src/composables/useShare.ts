@@ -85,7 +85,8 @@ export async function buildShareUrl(name: string, config: DiffuserConfig): Promi
   const raw = new TextEncoder().encode(json)
   const compressed = await compressBytes(raw)
   const encoded = uint8ToBase64Url(compressed)
-  return `${window.location.origin}/share?v1=${encoded}`
+  const base = import.meta.env.BASE_URL.replace(/\/$/, '')
+  return `${window.location.origin}${base}/share?v1=${encoded}`
 }
 
 export async function decodeShare(encoded: string): Promise<{ name: string; config: DiffuserConfig } | null> {
