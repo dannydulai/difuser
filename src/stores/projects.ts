@@ -60,5 +60,17 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
-  return { projects, createProject, deleteProject, getProject, updateProject, updateConfig }
+  function importProject(name: string, config: DiffuserConfig): Project {
+    const project: Project = {
+      id: crypto.randomUUID(),
+      name,
+      config: { ...DEFAULT_CONFIG, ...config },
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
+    projects.value.unshift(project)
+    return project
+  }
+
+  return { projects, createProject, deleteProject, getProject, updateProject, updateConfig, importProject }
 })

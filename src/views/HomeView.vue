@@ -61,7 +61,7 @@ function formatDate(ts: number) {
         </svg>
         <div>
           <h1 class="brand-name">difuser</h1>
-          <p class="brand-tagline">acoustic diffuser panel builder</p>
+
         </div>
       </div>
     </header>
@@ -207,12 +207,7 @@ function formatDate(ts: number) {
   color: var(--text-primary);
   letter-spacing: -0.02em;
 }
-.brand-tagline {
-  font-size: 12px;
-  color: var(--text-muted);
-  letter-spacing: 0.05em;
-  margin-top: 1px;
-}
+
 .home-main {
   max-width: 960px;
   margin: 0 auto;

@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectsStore } from '../stores/projects'
 import { useThreeScene } from '../composables/useThreeScene'
+import { buildShareUrl } from '../composables/useShare'
 import ControlPanel from '../components/builder/ControlPanel.vue'
 import type { DiffuserConfig } from '../types'
 
@@ -64,6 +65,15 @@ const blockCount = computed(() => {
   if (!config.value) return 0
   return config.value.panelCols * config.value.panelRows
 })
+
+const shareCopied = ref(false)
+async function shareProject() {
+  if (!project.value) return
+  const url = await buildShareUrl(project.value.name, project.value.config)
+  await navigator.clipboard.writeText(url)
+  shareCopied.value = true
+  setTimeout(() => { shareCopied.value = false }, 2000)
+}
 </script>
 
 <template>
@@ -101,8 +111,27 @@ const blockCount = computed(() => {
         <span>{{ blockCount }} blocks</span>
       </div>
 
+      <button class="btn-share" @click="shareProject" :title="shareCopied ? 'Copied!' : 'Copy share link'">
+        <svg v-if="!shareCopied" viewBox="0 0 16 16" fill="none">
+          <circle cx="4" cy="8" r="2" stroke="currentColor" stroke-width="1.3"/>
+          <circle cx="12" cy="4" r="2" stroke="currentColor" stroke-width="1.3"/>
+          <circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M5.7 7.1L10.3 4.9M5.7 8.9L10.3 11.1" stroke="currentColor" stroke-width="1.3"/>
+        </svg>
+        <svg v-else viewBox="0 0 16 16" fill="none">
+          <path d="M3 8.5L6.5 12L13 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>{{ shareCopied ? 'Copied!' : 'Share' }}</span>
+      </button>
+
       <div class="header-brand">
         <span class="brand-mark">difuser</span>
+        <svg class="brand-logo" viewBox="0 0 32 32" fill="none">
+          <rect x="2" y="2" width="12" height="12" rx="1" fill="currentColor" opacity="0.9" transform="rotate(5 8 8)"/>
+          <rect x="18" y="2" width="12" height="12" rx="1" fill="currentColor" opacity="0.7" transform="rotate(-8 24 8)"/>
+          <rect x="2" y="18" width="12" height="12" rx="1" fill="currentColor" opacity="0.6" transform="rotate(-3 8 24)"/>
+          <rect x="18" y="18" width="12" height="12" rx="1" fill="currentColor" opacity="0.8" transform="rotate(10 24 24)"/>
+        </svg>
       </div>
     </header>
 
@@ -222,14 +251,46 @@ const blockCount = computed(() => {
 .stat-divider {
   color: var(--border);
 }
+.btn-share {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  padding: 5px 10px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.btn-share:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+  border-color: var(--accent-dim);
+}
+.btn-share svg {
+  width: 14px;
+  height: 14px;
+}
 .header-brand {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .brand-mark {
   font-family: 'DM Serif Display', serif;
   font-size: 16px;
   color: var(--text-muted);
   letter-spacing: -0.02em;
+}
+.brand-logo {
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
 }
 
 .builder-body {
