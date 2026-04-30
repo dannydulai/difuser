@@ -4,7 +4,7 @@ import BuilderView from '../views/BuilderView.vue'
 import ShareView from '../views/ShareView.vue'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'home', component: HomeView },
     { path: '/builder/:id', name: 'builder', component: BuilderView, props: true },

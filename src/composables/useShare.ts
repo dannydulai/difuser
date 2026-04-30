@@ -81,6 +81,7 @@ function base64UrlToUint8(str: string): Uint8Array {
 export async function buildShareUrl(name: string, config: DiffuserConfig): Promise<string> {
   const payload: SharePayload = { v: 1, name, config }
   const json = JSON.stringify(payload)
+  console.log('Share payload:', json)
   const raw = new TextEncoder().encode(json)
   const compressed = await compressBytes(raw)
   const encoded = uint8ToBase64Url(compressed)
