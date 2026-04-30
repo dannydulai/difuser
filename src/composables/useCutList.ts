@@ -5,7 +5,9 @@ export interface AngleGroup {
   angle: number
   pairCount: number
   blockCount: number
-  stockDepth: number  // mm — depth of rectangular stock piece for this angle
+  stockDepth: number    // mm — depth of rectangular stock piece for this angle
+  stopDistance: number   // mm — fence-to-blade distance (thick side of wedge)
+  slopeHeight: number   // mm — height added by the angle
 }
 
 export interface CutList {
@@ -39,8 +41,9 @@ export function generateCutList(config: DiffuserConfig): CutList {
     .map(([angle, count]) => {
       const slopeHeight = blockDim * Math.tan(angle * Math.PI / 180)
       const stockDepth = Math.ceil(2 * config.minBlockDepth + slopeHeight)
+      const stopDistance = Math.ceil(config.minBlockDepth + slopeHeight)
       const pairCount = Math.ceil(count / 2)
-      return { angle, pairCount, blockCount: count, stockDepth }
+      return { angle, pairCount, blockCount: count, stockDepth, stopDistance, slopeHeight: Math.round(slopeHeight * 10) / 10 }
     })
 
   const flatPairs = angleGroups.find(g => g.angle === 0)?.pairCount ?? 0

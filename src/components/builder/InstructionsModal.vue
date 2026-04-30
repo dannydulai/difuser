@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { DiffuserConfig } from '../../types'
 import { generateCutList } from '../../composables/useCutList'
+import CutDiagram from './CutDiagram.vue'
 
 const props = defineProps<{ config: DiffuserConfig }>()
 defineEmits<{ close: [] }>()
@@ -70,29 +71,45 @@ const angledPairs = computed(() => cutList.value.totalPairs - cutList.value.flat
           <h3 class="step-number">Step 2 — Angled Cuts</h3>
           <h4 class="step-title">Split each stock piece into two wedge blocks</h4>
           <p class="step-desc">
-            For each group, set your saw to the listed angle and cut
-            straight through the middle of each stock piece. Each cut produces
-            two mirrored wedge blocks with a {{ cutList.minBlockDepth }}mm thin side.
+            Set your saw to the angle listed for each group. Position the fence
+            at the stop distance shown, then cut each stock piece. Each cut
+            produces two mirrored wedge blocks.
           </p>
 
           <template v-if="cutList.flatPairs > 0">
             <p class="step-note">
               The {{ cutList.flatPairs }} piece{{ cutList.flatPairs > 1 ? 's' : '' }}
-              at 0° just need a flat split — no angle.
+              at 0° just need a flat split at {{ cutList.minBlockDepth }}mm — no angle.
             </p>
           </template>
 
-          <div class="cut-cards">
+          <div class="angle-cuts">
             <div
               v-for="group in cutList.angleGroups.filter(g => g.angle > 0)"
               :key="group.angle"
-              class="cut-card"
+              class="angle-cut-group"
             >
-              <div class="cut-card-label">Group {{ cutList.angleGroups.indexOf(group) + 1 }}</div>
-              <div class="cut-card-row">
-                <span class="cut-card-qty">{{ group.pairCount }}</span>
-                <span class="cut-card-at">@</span>
-                <span class="cut-card-length">{{ group.angle }}°</span>
+              <div class="angle-cut-header">
+                <span class="angle-cut-title">Group {{ cutList.angleGroups.indexOf(group) + 1 }}</span>
+                <span class="angle-cut-summary">{{ group.pairCount }} cuts @ {{ group.angle }}°</span>
+              </div>
+              <div class="angle-cut-body">
+                <div class="angle-cut-info">
+                  <div class="angle-cut-stat">
+                    <span class="stat-label">Saw angle</span>
+                    <span class="stat-value">{{ group.angle }}°</span>
+                  </div>
+                  <div class="angle-cut-stat">
+                    <span class="stat-label">Stop distance</span>
+                    <span class="stat-value highlight">{{ group.stopDistance }}mm</span>
+                  </div>
+                </div>
+                <CutDiagram
+                  :angle="group.angle"
+                  :min-depth="cutList.minBlockDepth"
+                  :stop-distance="group.stopDistance"
+                  :stock-depth="group.stockDepth"
+                />
               </div>
             </div>
           </div>
@@ -293,6 +310,71 @@ const angledPairs = computed(() => cutList.value.totalPairs - cutList.value.flat
   color: var(--text-primary);
 }
 
+/* Step 2 angle cut groups */
+.angle-cuts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.angle-cut-group {
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.angle-cut-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--surface-2);
+}
+.angle-cut-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.angle-cut-summary {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.angle-cut-body {
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.angle-cut-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.angle-cut-stat {
+  display: flex;
+  flex-direction: column;
+}
+.stat-label {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+.stat-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.stat-value.highlight {
+  color: var(--accent);
+}
+
 @media (max-width: 768px) {
   .modal {
     width: calc(100vw - 16px);
@@ -313,6 +395,14 @@ const angledPairs = computed(() => cutList.value.totalPairs - cutList.value.flat
   }
   .cut-cards {
     flex-direction: column;
+  }
+  .angle-cut-body {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .angle-cut-info {
+    flex-direction: row;
+    gap: 20px;
   }
 }
 </style>
