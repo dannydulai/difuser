@@ -7,13 +7,7 @@ const props = defineProps<{ config: DiffuserConfig }>()
 defineEmits<{ close: [] }>()
 
 const cutList = computed(() => generateCutList(props.config))
-
-const angledPairCount = computed(() => cutList.value.totalPairs - cutList.value.flatCount)
-
-function rotationArrow(deg: number): string {
-  const dirs = ['→', '↗', '↑', '↖', '←', '↙', '↓', '↘']
-  return dirs[Math.round(deg / 45) % 8]
-}
+const angledPairs = computed(() => cutList.value.totalPairs - cutList.value.flatPairs)
 </script>
 
 <template>
@@ -37,130 +31,87 @@ function rotationArrow(deg: number): string {
           </div>
           <div class="summary-item">
             <span class="summary-value">{{ cutList.totalPairs }}</span>
-            <span class="summary-label">pairs</span>
+            <span class="summary-label">stock pieces</span>
           </div>
           <div class="summary-item">
             <span class="summary-value">{{ cutList.totalPairs }}</span>
             <span class="summary-label">straight cuts</span>
           </div>
           <div class="summary-item">
-            <span class="summary-value">{{ angledPairCount }}</span>
+            <span class="summary-value">{{ angledPairs }}</span>
             <span class="summary-label">angled cuts</span>
           </div>
         </section>
 
-        <!-- Step 1: Straight cuts -->
+        <!-- Step 1 -->
         <section class="step">
           <h3 class="step-number">Step 1 — Straight Cuts</h3>
-          <h4 class="step-title">Cut {{ cutList.totalPairs }} rectangular stock pieces</h4>
+          <h4 class="step-title">Cut rectangular stock pieces</h4>
           <p class="step-desc">
-            Each piece is
+            All pieces are
             <strong>{{ cutList.blockWidth }} &times; {{ cutList.blockHeight }}mm</strong>
-            in footprint. The depth varies per pair based on its angle
-            (max <strong>{{ cutList.maxStockDepth }}mm</strong>).
-          </p>
-          <p class="step-note">
-            Each stock piece will be cut in half with an angled cut in Step 2,
-            yielding two wedge blocks. The {{ cutList.minBlockDepth }}mm minimum depth
-            appears on the thin side of each wedge.
+            in footprint. Cut to the depth listed for each angle group.
           </p>
 
-          <div v-for="group in cutList.angleGroups" :key="group.angle" class="angle-group">
-            <div class="group-header">
-              <span class="group-angle">{{ group.angle }}°</span>
-              <span class="group-count">{{ group.pairs.length }} pair{{ group.pairs.length > 1 ? 's' : '' }}</span>
+          <div class="cut-cards">
+            <div v-for="group in cutList.angleGroups" :key="group.angle" class="cut-card">
+              <div class="cut-card-angle">{{ group.angle }}°</div>
+              <div class="cut-card-details">
+                <span class="cut-card-count">{{ group.pairCount }} piece{{ group.pairCount > 1 ? 's' : '' }}</span>
+                <span class="cut-card-dim">{{ cutList.blockWidth }} &times; {{ cutList.blockHeight }} &times; {{ group.stockDepth }}mm</span>
+              </div>
             </div>
-            <table class="cut-table">
-              <thead>
-                <tr>
-                  <th>Pair</th>
-                  <th>Stock Depth</th>
-                  <th>Positions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="pair in group.pairs" :key="pair.pairIndex">
-                  <td class="cell-pair">#{{ pair.pairIndex + 1 }}</td>
-                  <td class="cell-depth">{{ pair.stockDepth }}mm</td>
-                  <td class="cell-pos">
-                    R{{ pair.blockA.row }}C{{ pair.blockA.col }}
-                    <template v-if="pair.blockB">
-                      + R{{ pair.blockB.row }}C{{ pair.blockB.col }}
-                    </template>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
           </div>
         </section>
 
-        <!-- Step 2: Angled cuts -->
+        <!-- Step 2 -->
         <section class="step">
           <h3 class="step-number">Step 2 — Angled Cuts</h3>
-          <h4 class="step-title">Cut each stock piece in half at an angle</h4>
+          <h4 class="step-title">Split each stock piece into two wedge blocks</h4>
           <p class="step-desc">
-            Set your saw to the listed angle, orient the stock piece to the listed
-            rotation, and cut through the middle. Each cut produces two mirrored
-            wedge blocks.
-          </p>
-          <p class="step-note">
-            Group cuts by angle to minimize saw adjustments.
-            <template v-if="cutList.flatCount > 0">
-              {{ cutList.flatCount }} pair{{ cutList.flatCount > 1 ? 's are' : ' is' }}
-              at 0° — no angled cut needed, just split in half.
-            </template>
+            For each angle group, set your saw to the listed angle and cut
+            straight through the middle of each stock piece. Each cut produces
+            two mirrored wedge blocks with a {{ cutList.minBlockDepth }}mm thin side.
           </p>
 
-          <div
-            v-for="group in cutList.angleGroups"
-            :key="'angle-' + group.angle"
-            class="angle-group"
-          >
-            <div class="group-header">
-              <span class="group-angle" :class="{ flat: group.angle === 0 }">
-                {{ group.angle === 0 ? '0° — flat split' : `${group.angle}°` }}
-              </span>
-              <span class="group-count">{{ group.pairs.length }} pair{{ group.pairs.length > 1 ? 's' : '' }}</span>
-            </div>
-            <table v-if="group.angle > 0" class="cut-table">
-              <thead>
-                <tr>
-                  <th>Pair</th>
-                  <th>Rotation</th>
-                  <th>Positions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="pair in group.pairs" :key="pair.pairIndex">
-                  <td class="cell-pair">#{{ pair.pairIndex + 1 }}</td>
-                  <td class="cell-rot">{{ pair.rotationDeg }}° {{ rotationArrow(pair.rotationDeg) }}</td>
-                  <td class="cell-pos">
-                    R{{ pair.blockA.row }}C{{ pair.blockA.col }}
-                    <template v-if="pair.blockB">
-                      + R{{ pair.blockB.row }}C{{ pair.blockB.col }}
-                    </template>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <p v-else class="group-note">
-              Cut straight through the middle — no angle needed. Yields {{ group.pairs.length * 2 }} flat blocks.
+          <template v-if="cutList.flatPairs > 0">
+            <p class="step-note">
+              The {{ cutList.flatPairs }} piece{{ cutList.flatPairs > 1 ? 's' : '' }}
+              at 0° just need a flat split — no angle.
             </p>
+          </template>
+
+          <div class="cut-cards">
+            <div
+              v-for="group in cutList.angleGroups.filter(g => g.angle > 0)"
+              :key="group.angle"
+              class="cut-card"
+            >
+              <div class="cut-card-angle">{{ group.angle }}°</div>
+              <div class="cut-card-details">
+                <span class="cut-card-count">{{ group.pairCount }} cut{{ group.pairCount > 1 ? 's' : '' }}</span>
+                <span class="cut-card-dim">&rarr; {{ group.blockCount }} blocks</span>
+              </div>
+            </div>
           </div>
         </section>
 
-        <!-- Step 3: Assembly -->
+        <!-- Step 3 -->
         <section class="step">
           <h3 class="step-number">Step 3 — Assembly</h3>
           <h4 class="step-title">Arrange and glue</h4>
           <p class="step-desc">
-            Arrange the {{ cutList.totalBlocks }} blocks in a
+            Place blocks in a
             {{ props.config.panelCols }} &times; {{ props.config.panelRows }} grid
-            with {{ props.config.gap }}mm gaps between blocks.
-            Glue each block flat-side down onto the backplate.
+            with {{ props.config.gap }}mm gaps, rotating each wedge to a random
+            orientation. Glue flat-side down onto the backplate.
             <template v-if="props.config.frameDepth > 0">
               Attach the frame around the perimeter.
             </template>
+          </p>
+          <p class="step-note">
+            The exact rotation of each block doesn't matter for acoustics —
+            random placement diffuses sound effectively.
           </p>
         </section>
       </div>
@@ -183,7 +134,7 @@ function rotationArrow(deg: number): string {
   background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: 16px;
-  width: min(640px, 90vw);
+  width: min(540px, 90vw);
   max-height: 85vh;
   display: flex;
   flex-direction: column;
@@ -230,7 +181,6 @@ function rotationArrow(deg: number): string {
   scrollbar-color: var(--surface-3) transparent;
 }
 
-/* Summary bar */
 .summary {
   display: flex;
   gap: 4px;
@@ -284,7 +234,7 @@ function rotationArrow(deg: number): string {
   font-size: 13px;
   color: var(--text-secondary);
   line-height: 1.5;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 }
 .step-desc strong {
   color: var(--text-primary);
@@ -294,81 +244,47 @@ function rotationArrow(deg: number): string {
   font-size: 12px;
   color: var(--text-muted);
   line-height: 1.4;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
-.angle-group {
-  margin-top: 12px;
+.cut-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cut-card {
   background: var(--surface-0);
   border: 1px solid var(--border);
   border-radius: 10px;
-  overflow: hidden;
-}
-.group-header {
+  padding: 12px 16px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background: var(--surface-2);
+  gap: 14px;
+  min-width: 180px;
+  flex: 1;
 }
-.group-angle {
+.cut-card-angle {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
+  font-size: 22px;
   font-weight: 500;
-  color: var(--text-primary);
-}
-.group-angle.flat {
-  color: var(--text-muted);
-}
-.group-count {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-.group-note {
-  padding: 10px 14px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.cut-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-.cut-table th {
-  text-align: left;
-  padding: 6px 14px;
-  font-family: 'Outfit', sans-serif;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border);
-}
-.cut-table td {
-  padding: 5px 14px;
-  border-bottom: 1px solid var(--border);
-}
-.cut-table tr:last-child td {
-  border-bottom: none;
-}
-.cell-pair {
-  font-family: 'JetBrains Mono', monospace;
   color: var(--accent);
-  font-weight: 500;
+  min-width: 40px;
 }
-.cell-pos {
-  font-family: 'JetBrains Mono', monospace;
+.cut-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.cut-card-count {
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text-primary);
 }
-.cell-rot {
+.cut-card-dim {
   font-family: 'JetBrains Mono', monospace;
-  color: var(--text-secondary);
-}
-.cell-depth {
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--text-secondary);
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 @media (max-width: 768px) {
@@ -388,6 +304,9 @@ function rotationArrow(deg: number): string {
   }
   .summary-item {
     min-width: calc(50% - 4px);
+  }
+  .cut-cards {
+    flex-direction: column;
   }
 }
 </style>
