@@ -38,7 +38,7 @@ export function generateCutList(config: DiffuserConfig): CutList {
     .sort((a, b) => a[0] - b[0])
     .map(([angle, count]) => {
       const slopeHeight = blockDim * Math.tan(angle * Math.PI / 180)
-      const stockDepth = Math.round((2 * config.minBlockDepth + slopeHeight) * 10) / 10
+      const stockDepth = Math.ceil(2 * config.minBlockDepth + slopeHeight)
       const pairCount = Math.ceil(count / 2)
       return { angle, pairCount, blockCount: count, stockDepth }
     })

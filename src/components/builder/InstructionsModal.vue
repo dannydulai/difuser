@@ -54,9 +54,13 @@ const angledPairs = computed(() => cutList.value.totalPairs - cutList.value.flat
           </p>
 
           <div class="cut-cards">
-            <div v-for="group in cutList.angleGroups" :key="group.angle" class="cut-card">
-              <div class="cut-card-qty">{{ group.pairCount }}&times;</div>
-              <div class="cut-card-length">{{ group.stockDepth }}mm</div>
+            <div v-for="(group, i) in cutList.angleGroups" :key="group.angle" class="cut-card">
+              <div class="cut-card-label">Group {{ i + 1 }}</div>
+              <div class="cut-card-row">
+                <span class="cut-card-qty">{{ group.pairCount }}</span>
+                <span class="cut-card-at">@</span>
+                <span class="cut-card-length">{{ group.stockDepth }}mm</span>
+              </div>
             </div>
           </div>
         </section>
@@ -66,7 +70,7 @@ const angledPairs = computed(() => cutList.value.totalPairs - cutList.value.flat
           <h3 class="step-number">Step 2 — Angled Cuts</h3>
           <h4 class="step-title">Split each stock piece into two wedge blocks</h4>
           <p class="step-desc">
-            For each angle group, set your saw to the listed angle and cut
+            For each group, set your saw to the listed angle and cut
             straight through the middle of each stock piece. Each cut produces
             two mirrored wedge blocks with a {{ cutList.minBlockDepth }}mm thin side.
           </p>
@@ -84,8 +88,12 @@ const angledPairs = computed(() => cutList.value.totalPairs - cutList.value.flat
               :key="group.angle"
               class="cut-card"
             >
-              <div class="cut-card-qty">{{ group.pairCount }}&times;</div>
-              <div class="cut-card-length">{{ group.angle }}°</div>
+              <div class="cut-card-label">Group {{ cutList.angleGroups.indexOf(group) + 1 }}</div>
+              <div class="cut-card-row">
+                <span class="cut-card-qty">{{ group.pairCount }}</span>
+                <span class="cut-card-at">@</span>
+                <span class="cut-card-length">{{ group.angle }}°</span>
+              </div>
             </div>
           </div>
         </section>
@@ -251,11 +259,22 @@ const angledPairs = computed(() => cutList.value.totalPairs - cutList.value.flat
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 180px;
+  min-width: 140px;
   flex: 1;
+}
+.cut-card-label {
+  font-family: 'Outfit', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.cut-card-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
 }
 .cut-card-qty {
   font-family: 'JetBrains Mono', monospace;
@@ -263,21 +282,15 @@ const angledPairs = computed(() => cutList.value.totalPairs - cutList.value.flat
   font-weight: 500;
   color: var(--accent);
 }
+.cut-card-at {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--text-muted);
+}
 .cut-card-length {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 16px;
+  font-size: 18px;
   color: var(--text-primary);
-}
-.cut-card-detail {
-  font-family: 'Outfit', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-.cut-card-sub {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  color: var(--text-muted);
 }
 
 @media (max-width: 768px) {
