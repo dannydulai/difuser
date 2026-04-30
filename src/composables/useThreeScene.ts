@@ -351,14 +351,15 @@ export function useThreeScene(
 
     // Scene
     scene = new THREE.Scene()
-    scene.background = new THREE.Color('#18181b')
-
-    // Environment map — procedural studio HDRI for realistic reflections
+    // Environment map — procedural studio HDRI for reflections + blurred background
     const pmremGenerator = new THREE.PMREMGenerator(renderer)
     pmremGenerator.compileEquirectangularShader()
     const roomEnv = new RoomEnvironment()
     envMap = pmremGenerator.fromScene(roomEnv, 0.04).texture
     scene.environment = envMap
+    scene.background = envMap
+    scene.backgroundBlurriness = 0.8
+    scene.backgroundIntensity = 0.15
     pmremGenerator.dispose()
 
     // Camera
@@ -397,13 +398,6 @@ export function useThreeScene(
     rimLight.position.set(0, -3, -8)
     scene.add(rimLight)
 
-    // Ground plane for shadow catching
-    const groundGeo = new THREE.PlaneGeometry(40, 40)
-    const groundMat = new THREE.ShadowMaterial({ opacity: 0.25 })
-    const ground = new THREE.Mesh(groundGeo, groundMat)
-    ground.position.z = -0.5
-    ground.receiveShadow = true
-    scene.add(ground)
 
     // Diffuser group
     diffuserGroup = new THREE.Group()
