@@ -5,6 +5,7 @@ import { useProjectsStore } from '../stores/projects'
 import { useThreeScene } from '../composables/useThreeScene'
 import { buildShareUrl } from '../composables/useShare'
 import ControlPanel from '../components/builder/ControlPanel.vue'
+import InstructionsModal from '../components/builder/InstructionsModal.vue'
 import type { DiffuserConfig } from '../types'
 
 const props = defineProps<{ id: string }>()
@@ -67,6 +68,7 @@ const blockCount = computed(() => {
 })
 
 const isDraft = computed(() => props.id === 'draft')
+const showInstructions = ref(false)
 
 const shareCopied = ref(false)
 async function shareProject() {
@@ -135,6 +137,13 @@ function goBack() {
         <span>Save to My Projects</span>
       </button>
 
+      <button class="btn-instructions" @click="showInstructions = true" title="Cut instructions">
+        <svg viewBox="0 0 16 16" fill="none">
+          <path d="M2 3h12M2 6.5h8M2 10h10M2 13.5h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        <span>Instructions</span>
+      </button>
+
       <button class="btn-share" @click="shareProject" :title="shareCopied ? 'Copied!' : 'Copy share link'">
         <svg v-if="!shareCopied" viewBox="0 0 16 16" fill="none">
           <circle cx="4" cy="8" r="2" stroke="currentColor" stroke-width="1.3"/>
@@ -170,6 +179,14 @@ function goBack() {
       </aside>
       <main class="viewport" ref="viewportRef" />
     </div>
+
+    <Teleport to="body">
+      <InstructionsModal
+        v-if="showInstructions && config"
+        :config="config"
+        @close="showInstructions = false"
+      />
+    </Teleport>
   </div>
 </template>
 
@@ -310,6 +327,7 @@ function goBack() {
   width: 14px;
   height: 14px;
 }
+.btn-instructions,
 .btn-share {
   display: flex;
   align-items: center;
@@ -325,11 +343,13 @@ function goBack() {
   transition: all 0.15s;
   flex-shrink: 0;
 }
+.btn-instructions:hover,
 .btn-share:hover {
   background: var(--surface-3);
   color: var(--text-primary);
   border-color: var(--accent-dim);
 }
+.btn-instructions svg,
 .btn-share svg {
   width: 14px;
   height: 14px;
