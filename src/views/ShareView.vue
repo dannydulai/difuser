@@ -23,8 +23,8 @@ onMounted(async () => {
     return
   }
 
-  const project = store.importProject(result.name, result.config)
-  router.replace({ name: 'builder', params: { id: project.id } })
+  store.setDraft(result.name, result.config)
+  router.replace({ name: 'builder', params: { id: 'draft' } })
 })
 </script>
 
@@ -36,7 +36,7 @@ onMounted(async () => {
       <button class="btn-home" @click="router.push({ name: 'home' })">Go Home</button>
     </div>
     <div v-else class="share-loading">
-      <p>Importing project...</p>
+      <p>Loading shared project...</p>
     </div>
   </div>
 </template>

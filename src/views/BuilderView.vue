@@ -66,6 +66,8 @@ const blockCount = computed(() => {
   return config.value.panelCols * config.value.panelRows
 })
 
+const isDraft = computed(() => props.id === 'draft')
+
 const shareCopied = ref(false)
 async function shareProject() {
   if (!project.value) return
@@ -74,12 +76,24 @@ async function shareProject() {
   shareCopied.value = true
   setTimeout(() => { shareCopied.value = false }, 2000)
 }
+
+function saveDraft() {
+  const saved = store.saveDraft()
+  if (saved) {
+    router.replace({ name: 'builder', params: { id: saved.id } })
+  }
+}
+
+function goBack() {
+  if (isDraft.value) store.clearDraft()
+  router.push({ name: 'home' })
+}
 </script>
 
 <template>
   <div v-if="project" class="builder">
     <header class="builder-header">
-      <button class="btn-back" @click="router.push({ name: 'home' })" title="Back to projects">
+      <button class="btn-back" @click="goBack" title="Back to projects">
         <svg viewBox="0 0 16 16" fill="none">
           <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
@@ -110,6 +124,16 @@ async function shareProject() {
         <span class="stat-divider">&middot;</span>
         <span>{{ blockCount }} blocks</span>
       </div>
+
+      <span v-if="isDraft" class="draft-badge">SHARED</span>
+
+      <button v-if="isDraft" class="btn-save" @click="saveDraft">
+        <svg viewBox="0 0 16 16" fill="none">
+          <path d="M12.5 14h-9A1.5 1.5 0 012 12.5v-9A1.5 1.5 0 013.5 2H10l4 4v6.5a1.5 1.5 0 01-1.5 1.5z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M11 14V9H5v5M5 2v3h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Save to My Projects</span>
+      </button>
 
       <button class="btn-share" @click="shareProject" :title="shareCopied ? 'Copied!' : 'Copy share link'">
         <svg v-if="!shareCopied" viewBox="0 0 16 16" fill="none">
@@ -250,6 +274,41 @@ async function shareProject() {
 }
 .stat-divider {
   color: var(--border);
+}
+.draft-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  background: rgba(200, 147, 90, 0.12);
+  border: 1px solid var(--accent-dim);
+  border-radius: 4px;
+  padding: 2px 7px;
+  flex-shrink: 0;
+}
+.btn-save {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: var(--surface-0);
+  padding: 5px 12px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.btn-save:hover {
+  background: var(--accent-hover);
+}
+.btn-save svg {
+  width: 14px;
+  height: 14px;
 }
 .btn-share {
   display: flex;
