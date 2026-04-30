@@ -8,11 +8,11 @@ defineEmits<{ close: [] }>()
 
 const cutList = computed(() => generateCutList(props.config))
 
-function rotationLabel(deg: number): string {
-  // Express as compass-like direction for intuitive orientation
+const angledPairCount = computed(() => cutList.value.totalPairs - cutList.value.flatCount)
+
+function rotationArrow(deg: number): string {
   const dirs = ['→', '↗', '↑', '↖', '←', '↙', '↓', '↘']
-  const idx = Math.round(deg / 45) % 8
-  return `${deg}° ${dirs[idx]}`
+  return dirs[Math.round(deg / 45) % 8]
 }
 </script>
 
@@ -29,72 +29,135 @@ function rotationLabel(deg: number): string {
       </header>
 
       <div class="modal-body">
-        <!-- Step 1: Stock -->
-        <section class="step">
-          <h3 class="step-number">Step 1</h3>
-          <h4 class="step-title">Prepare Stock</h4>
-          <p class="step-desc">
-            Cut <strong>{{ cutList.totalBlocks }}</strong> blocks to
-            <strong>{{ cutList.blockWidth }} &times; {{ cutList.blockHeight }} &times; {{ cutList.stockDepth }} mm</strong>
-          </p>
-          <p class="step-note">
-            Stock depth of {{ cutList.stockDepth }}mm accommodates the steepest angled cut.
-            All blocks start at this thickness, then get trimmed by the angle cuts below.
-          </p>
+        <!-- Summary -->
+        <section class="summary">
+          <div class="summary-item">
+            <span class="summary-value">{{ cutList.totalBlocks }}</span>
+            <span class="summary-label">blocks</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-value">{{ cutList.totalPairs }}</span>
+            <span class="summary-label">pairs</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-value">{{ cutList.totalPairs }}</span>
+            <span class="summary-label">straight cuts</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-value">{{ angledPairCount }}</span>
+            <span class="summary-label">angled cuts</span>
+          </div>
         </section>
 
-        <!-- Step 2: Angle cuts -->
+        <!-- Step 1: Straight cuts -->
         <section class="step">
-          <h3 class="step-number">Step 2</h3>
-          <h4 class="step-title">Angle Cuts</h4>
+          <h3 class="step-number">Step 1 — Straight Cuts</h3>
+          <h4 class="step-title">Cut {{ cutList.totalPairs }} rectangular stock pieces</h4>
           <p class="step-desc">
-            Group cuts by saw angle to minimize adjustments.
-            For each block, rotate it on the sled to the listed direction before cutting.
+            Each piece is
+            <strong>{{ cutList.blockWidth }} &times; {{ cutList.blockHeight }}mm</strong>
+            in footprint. The depth varies per pair based on its angle
+            (max <strong>{{ cutList.maxStockDepth }}mm</strong>).
+          </p>
+          <p class="step-note">
+            Each stock piece will be cut in half with an angled cut in Step 2,
+            yielding two wedge blocks. The {{ cutList.minBlockDepth }}mm minimum depth
+            appears on the thin side of each wedge.
           </p>
 
-          <div
-            v-for="group in cutList.angleGroups"
-            :key="group.angle"
-            class="angle-group"
-          >
+          <div v-for="group in cutList.angleGroups" :key="group.angle" class="angle-group">
             <div class="group-header">
-              <span class="group-angle" :class="{ flat: group.angle === 0 }">
-                {{ group.angle === 0 ? 'No cut' : `${group.angle}°` }}
-              </span>
-              <span class="group-count">{{ group.blocks.length }} block{{ group.blocks.length > 1 ? 's' : '' }}</span>
+              <span class="group-angle">{{ group.angle }}°</span>
+              <span class="group-count">{{ group.pairs.length }} pair{{ group.pairs.length > 1 ? 's' : '' }}</span>
             </div>
-
-            <p v-if="group.angle === 0" class="group-note">
-              These blocks remain flat — no angle cut needed.
-            </p>
-
-            <table v-else class="cut-table">
+            <table class="cut-table">
               <thead>
                 <tr>
-                  <th>Position</th>
-                  <th>Rotation</th>
-                  <th>Max Depth</th>
+                  <th>Pair</th>
+                  <th>Stock Depth</th>
+                  <th>Positions</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="block in group.blocks" :key="`${block.row}-${block.col}`">
-                  <td class="cell-pos">R{{ block.row }} C{{ block.col }}</td>
-                  <td class="cell-rot">{{ rotationLabel(block.rotation) }}</td>
-                  <td class="cell-depth">{{ block.maxDepth }}mm</td>
+                <tr v-for="pair in group.pairs" :key="pair.pairIndex">
+                  <td class="cell-pair">#{{ pair.pairIndex + 1 }}</td>
+                  <td class="cell-depth">{{ pair.stockDepth }}mm</td>
+                  <td class="cell-pos">
+                    R{{ pair.blockA.row }}C{{ pair.blockA.col }}
+                    <template v-if="pair.blockB">
+                      + R{{ pair.blockB.row }}C{{ pair.blockB.col }}
+                    </template>
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
         </section>
 
+        <!-- Step 2: Angled cuts -->
+        <section class="step">
+          <h3 class="step-number">Step 2 — Angled Cuts</h3>
+          <h4 class="step-title">Cut each stock piece in half at an angle</h4>
+          <p class="step-desc">
+            Set your saw to the listed angle, orient the stock piece to the listed
+            rotation, and cut through the middle. Each cut produces two mirrored
+            wedge blocks.
+          </p>
+          <p class="step-note">
+            Group cuts by angle to minimize saw adjustments.
+            <template v-if="cutList.flatCount > 0">
+              {{ cutList.flatCount }} pair{{ cutList.flatCount > 1 ? 's are' : ' is' }}
+              at 0° — no angled cut needed, just split in half.
+            </template>
+          </p>
+
+          <div
+            v-for="group in cutList.angleGroups"
+            :key="'angle-' + group.angle"
+            class="angle-group"
+          >
+            <div class="group-header">
+              <span class="group-angle" :class="{ flat: group.angle === 0 }">
+                {{ group.angle === 0 ? '0° — flat split' : `${group.angle}°` }}
+              </span>
+              <span class="group-count">{{ group.pairs.length }} pair{{ group.pairs.length > 1 ? 's' : '' }}</span>
+            </div>
+            <table v-if="group.angle > 0" class="cut-table">
+              <thead>
+                <tr>
+                  <th>Pair</th>
+                  <th>Rotation</th>
+                  <th>Positions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="pair in group.pairs" :key="pair.pairIndex">
+                  <td class="cell-pair">#{{ pair.pairIndex + 1 }}</td>
+                  <td class="cell-rot">{{ pair.rotationDeg }}° {{ rotationArrow(pair.rotationDeg) }}</td>
+                  <td class="cell-pos">
+                    R{{ pair.blockA.row }}C{{ pair.blockA.col }}
+                    <template v-if="pair.blockB">
+                      + R{{ pair.blockB.row }}C{{ pair.blockB.col }}
+                    </template>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-else class="group-note">
+              Cut straight through the middle — no angle needed. Yields {{ group.pairs.length * 2 }} flat blocks.
+            </p>
+          </div>
+        </section>
+
         <!-- Step 3: Assembly -->
         <section class="step">
-          <h3 class="step-number">Step 3</h3>
-          <h4 class="step-title">Assembly</h4>
+          <h3 class="step-number">Step 3 — Assembly</h3>
+          <h4 class="step-title">Arrange and glue</h4>
           <p class="step-desc">
-            Arrange blocks in the grid ({{ props.config.panelCols }} columns &times; {{ props.config.panelRows }} rows)
-            with {{ props.config.gap }}mm gaps.
-            Glue blocks flat-side down onto the backplate.
+            Arrange the {{ cutList.totalBlocks }} blocks in a
+            {{ props.config.panelCols }} &times; {{ props.config.panelRows }} grid
+            with {{ props.config.gap }}mm gaps between blocks.
+            Glue each block flat-side down onto the backplate.
             <template v-if="props.config.frameDepth > 0">
               Attach the frame around the perimeter.
             </template>
@@ -167,6 +230,35 @@ function rotationLabel(deg: number): string {
   scrollbar-color: var(--surface-3) transparent;
 }
 
+/* Summary bar */
+.summary {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+.summary-item {
+  flex: 1;
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 12px 10px;
+  text-align: center;
+}
+.summary-value {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.summary-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
 .step {
   margin-bottom: 28px;
 }
@@ -202,10 +294,11 @@ function rotationLabel(deg: number): string {
   font-size: 12px;
   color: var(--text-muted);
   line-height: 1.4;
+  margin-bottom: 12px;
 }
 
 .angle-group {
-  margin-top: 16px;
+  margin-top: 12px;
   background: var(--surface-0);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -260,6 +353,11 @@ function rotationLabel(deg: number): string {
 .cut-table tr:last-child td {
   border-bottom: none;
 }
+.cell-pair {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--accent);
+  font-weight: 500;
+}
 .cell-pos {
   font-family: 'JetBrains Mono', monospace;
   color: var(--text-primary);
@@ -270,6 +368,26 @@ function rotationLabel(deg: number): string {
 }
 .cell-depth {
   font-family: 'JetBrains Mono', monospace;
-  color: var(--text-muted);
+  color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+  .modal {
+    width: calc(100vw - 16px);
+    max-height: 90vh;
+    border-radius: 12px;
+  }
+  .modal-header {
+    padding: 16px;
+  }
+  .modal-body {
+    padding: 16px;
+  }
+  .summary {
+    flex-wrap: wrap;
+  }
+  .summary-item {
+    min-width: calc(50% - 4px);
+  }
 }
 </style>

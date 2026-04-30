@@ -1,90 +1,104 @@
 import type { DiffuserConfig } from '../types'
-import { createSeededRandom, seededRandomInRange } from './useSeededRandom'
+import { generateBlockLayout, type BlockSpec } from './useBlockLayout'
 
-export interface BlockCut {
-  row: number
-  col: number
-  angle: number        // degrees
-  rotation: number     // degrees (0–360)
-  maxDepth: number     // mm — tallest point of this block
+export interface BlockPair {
+  pairIndex: number
+  angle: number
+  rotationDeg: number   // rotation of side A in degrees
+  stockDepth: number    // depth of rectangular stock piece (mm)
+  blockA: { row: number; col: number }
+  blockB: { row: number; col: number } | null  // null if odd block out
 }
 
 export interface AngleGroup {
   angle: number
-  blocks: BlockCut[]
+  pairs: BlockPair[]
 }
 
 export interface CutList {
-  // Stock
   totalBlocks: number
+  totalPairs: number
   blockWidth: number
   blockHeight: number
-  stockDepth: number   // mm — stock thickness needed (max depth across all blocks)
   minBlockDepth: number
-
-  // Grouped by angle, sorted
+  maxStockDepth: number   // thickest stock piece needed
   angleGroups: AngleGroup[]
+  flatCount: number       // pairs with 0° angle (no angled cut needed)
+}
 
-  // Flat blocks (0° angle)
-  flatCount: number
+function computeStockDepth(
+  angle: number,
+  rotation: number,
+  blockWidth: number,
+  blockHeight: number,
+  minBlockDepth: number
+): number {
+  const halfW = blockWidth / 2
+  const halfH = blockHeight / 2
+  const cosR = Math.cos(rotation)
+  const sinR = Math.sin(rotation)
+  const maxProj = Math.abs(halfW * cosR) + Math.abs(halfH * sinR)
+  const slopeHeight = maxProj > 0 ? 2 * maxProj * Math.tan(angle * Math.PI / 180) : 0
+  // Two mirrored wedges from one stock piece:
+  // Each wedge has minDepth on thin side, minDepth + slope on thick side
+  // Stock = minDepth + slopeHeight + minDepth
+  return 2 * minBlockDepth + slopeHeight
 }
 
 export function generateCutList(config: DiffuserConfig): CutList {
-  const c = config
-  const cols = c.panelCols
-  const rows = c.panelRows
-  const rng = createSeededRandom(c.randomSeed)
+  const layout = generateBlockLayout(config)
+  const totalBlocks = layout.length
 
-  const halfW = c.blockWidth / 2
-  const halfH = c.blockHeight / 2
+  // Group blocks by pair
+  const pairMap = new Map<number, BlockSpec[]>()
+  for (const block of layout) {
+    if (!pairMap.has(block.pairIndex)) pairMap.set(block.pairIndex, [])
+    pairMap.get(block.pairIndex)!.push(block)
+  }
 
-  const blocks: BlockCut[] = []
+  const pairs: BlockPair[] = []
+  for (const [pairIndex, blocks] of pairMap) {
+    const a = blocks.find(b => b.pairSide === 'A')!
+    const b = blocks.find(b => b.pairSide === 'B') ?? null
 
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      const angle = seededRandomInRange(rng, c.minAngle, c.maxAngle, 5)
-      const rotation = rng() * Math.PI * 2
+    const stockDepth = Math.round(
+      computeStockDepth(a.angle, a.rotation, config.blockWidth, config.blockHeight, config.minBlockDepth) * 10
+    ) / 10
 
-      // Compute max depth for this block
-      const cosR = Math.cos(rotation)
-      const sinR = Math.sin(rotation)
-      const maxProj = Math.abs(halfW * cosR) + Math.abs(halfH * sinR)
-      const slopeHeight = maxProj > 0 ? 2 * maxProj * Math.tan(angle * Math.PI / 180) : 0
-      const maxDepth = c.minBlockDepth + slopeHeight
-
-      blocks.push({
-        row: row + 1,
-        col: col + 1,
-        angle,
-        rotation: Math.round((rotation * 180 / Math.PI) % 360),
-        maxDepth: Math.round(maxDepth * 10) / 10,
-      })
-    }
+    pairs.push({
+      pairIndex,
+      angle: a.angle,
+      rotationDeg: Math.round((a.rotation * 180 / Math.PI) % 360),
+      stockDepth,
+      blockA: { row: a.row + 1, col: a.col + 1 },
+      blockB: b ? { row: b.row + 1, col: b.col + 1 } : null,
+    })
   }
 
   // Group by angle
-  const groupMap = new Map<number, BlockCut[]>()
-  for (const b of blocks) {
-    if (!groupMap.has(b.angle)) groupMap.set(b.angle, [])
-    groupMap.get(b.angle)!.push(b)
+  const groupMap = new Map<number, BlockPair[]>()
+  for (const pair of pairs) {
+    if (!groupMap.has(pair.angle)) groupMap.set(pair.angle, [])
+    groupMap.get(pair.angle)!.push(pair)
   }
 
   const angleGroups: AngleGroup[] = Array.from(groupMap.entries())
     .sort((a, b) => a[0] - b[0])
-    .map(([angle, gBlocks]) => ({
+    .map(([angle, gPairs]) => ({
       angle,
-      blocks: gBlocks.sort((a, b) => a.rotation - b.rotation),
+      pairs: gPairs.sort((a, b) => a.rotationDeg - b.rotationDeg),
     }))
 
-  const stockDepth = Math.ceil(Math.max(...blocks.map(b => b.maxDepth)))
-  const flatCount = blocks.filter(b => b.angle === 0).length
+  const maxStockDepth = Math.ceil(Math.max(...pairs.map(p => p.stockDepth)))
+  const flatCount = pairs.filter(p => p.angle === 0).length
 
   return {
-    totalBlocks: blocks.length,
-    blockWidth: c.blockWidth,
-    blockHeight: c.blockHeight,
-    stockDepth,
-    minBlockDepth: c.minBlockDepth,
+    totalBlocks,
+    totalPairs: pairs.length,
+    blockWidth: config.blockWidth,
+    blockHeight: config.blockHeight,
+    minBlockDepth: config.minBlockDepth,
+    maxStockDepth,
     angleGroups,
     flatCount,
   }

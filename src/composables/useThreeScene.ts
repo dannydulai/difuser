@@ -10,7 +10,8 @@ import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import type { DiffuserConfig, SurfaceType, WoodType, Finish } from '../types'
 import { WOOD_COLORS } from '../types'
-import { createSeededRandom, seededRandomInRange } from './useSeededRandom'
+import { createSeededRandom } from './useSeededRandom'
+import { generateBlockLayout } from './useBlockLayout'
 import { generateWoodTextures, generateBrushedAluminumTextures } from './useTextures'
 
 const DEG2RAD = Math.PI / 180
@@ -259,79 +260,78 @@ export function useThreeScene(
     const startX = -gridW / 2
     const startY = -gridH / 2
 
-    const rng = createSeededRandom(c.randomSeed)
     const blockRoughness = finishToRoughness(c.blockFinish)
     const blockClearcoat = finishToClearcoat(c.blockFinish)
     const woodColors = WOOD_COLORS[c.blockMaterial]
     const blockWoodTex = c.colorMode === 'Natural wood' ? getWoodTextures(c.blockMaterial) : null
 
-    const totalBlocks = rows * cols
+    const layout = generateBlockLayout(c)
+    const totalBlocks = layout.length
     const gradSteps = Math.max(2, c.gradientSteps)
     const gradDither = c.gradientDither / 100
 
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-        const cutAngle = seededRandomInRange(rng, c.minAngle, c.maxAngle, 5)
-        const cutRotation = rng() * Math.PI * 2
+    // Separate RNG for colors (so color assignment is independent of layout)
+    const colorRng = createSeededRandom(c.randomSeed + 7919)
 
-        let blockColor: THREE.Color
+    for (const block of layout) {
+      let blockColor: THREE.Color
 
-        switch (c.colorMode) {
-          case 'Solid color':
-            blockColor = new THREE.Color(c.solidColor)
-            break
-          case 'Gradient': {
-            let t = (row * cols + col) / (totalBlocks - 1 || 1)
-            if (gradDither > 0) {
-              t += (rng() - 0.5) * gradDither
-              t = Math.max(0, Math.min(1, t))
-            }
-            const stepIndex = Math.round(t * (gradSteps - 1))
-            const quantized = stepIndex / (gradSteps - 1)
-            blockColor = new THREE.Color(c.gradientStart).lerp(
-              new THREE.Color(c.gradientEnd),
-              quantized
-            )
-            break
+      switch (c.colorMode) {
+        case 'Solid color':
+          blockColor = new THREE.Color(c.solidColor)
+          break
+        case 'Gradient': {
+          const idx = block.row * cols + block.col
+          let t = idx / (totalBlocks - 1 || 1)
+          if (gradDither > 0) {
+            t += (colorRng() - 0.5) * gradDither
+            t = Math.max(0, Math.min(1, t))
           }
-          default: {
-            const variation = rng() * 0.15 - 0.075
-            blockColor = new THREE.Color(woodColors.base)
-            blockColor.r = Math.max(0, Math.min(1, blockColor.r + variation))
-            blockColor.g = Math.max(0, Math.min(1, blockColor.g + variation))
-            blockColor.b = Math.max(0, Math.min(1, blockColor.b + variation))
-          }
+          const stepIndex = Math.round(t * (gradSteps - 1))
+          const quantized = stepIndex / (gradSteps - 1)
+          blockColor = new THREE.Color(c.gradientStart).lerp(
+            new THREE.Color(c.gradientEnd),
+            quantized
+          )
+          break
         }
-
-        const mat = new THREE.MeshPhysicalMaterial({
-          color: blockColor,
-          roughness: blockRoughness,
-          metalness: 0.0,
-          clearcoat: blockClearcoat,
-          clearcoatRoughness: 0.3,
-          envMapIntensity: 0.3,
-          ...(blockWoodTex ? {
-            map: blockWoodTex.map,
-            normalMap: blockWoodTex.normalMap,
-            normalScale: new THREE.Vector2(0.25, 0.25),
-            roughnessMap: blockWoodTex.roughnessMap,
-            sheen: 0.3,
-            sheenRoughness: 0.6,
-            sheenColor: new THREE.Color(woodColors.grain),
-          } : {}),
-        })
-
-        const geo = createWedgeGeometry(bw, bh, minBd, cutAngle, cutRotation)
-        const mesh = new THREE.Mesh(geo, mat)
-
-        const x = startX + col * (bw + gap) + bw / 2
-        const y = startY + row * (bh + gap) + bh / 2
-        mesh.position.set(x, y, 0)
-
-        mesh.castShadow = true
-        mesh.receiveShadow = true
-        diffuserGroup.add(mesh)
+        default: {
+          const variation = colorRng() * 0.15 - 0.075
+          blockColor = new THREE.Color(woodColors.base)
+          blockColor.r = Math.max(0, Math.min(1, blockColor.r + variation))
+          blockColor.g = Math.max(0, Math.min(1, blockColor.g + variation))
+          blockColor.b = Math.max(0, Math.min(1, blockColor.b + variation))
+        }
       }
+
+      const mat = new THREE.MeshPhysicalMaterial({
+        color: blockColor,
+        roughness: blockRoughness,
+        metalness: 0.0,
+        clearcoat: blockClearcoat,
+        clearcoatRoughness: 0.3,
+        envMapIntensity: 0.3,
+        ...(blockWoodTex ? {
+          map: blockWoodTex.map,
+          normalMap: blockWoodTex.normalMap,
+          normalScale: new THREE.Vector2(0.25, 0.25),
+          roughnessMap: blockWoodTex.roughnessMap,
+          sheen: 0.3,
+          sheenRoughness: 0.6,
+          sheenColor: new THREE.Color(woodColors.grain),
+        } : {}),
+      })
+
+      const geo = createWedgeGeometry(bw, bh, minBd, block.angle, block.rotation)
+      const mesh = new THREE.Mesh(geo, mat)
+
+      const x = startX + block.col * (bw + gap) + bw / 2
+      const y = startY + block.row * (bh + gap) + bh / 2
+      mesh.position.set(x, y, 0)
+
+      mesh.castShadow = true
+      mesh.receiveShadow = true
+      diffuserGroup.add(mesh)
     }
 
     // Frame
