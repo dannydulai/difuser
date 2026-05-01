@@ -139,23 +139,6 @@ const frameDepthMax = computed(() => 200 + props.config.minBlockDepth)
       <SelectInput v-model="blockFinish" label="Finish" :options="finishes" />
     </SectionCollapsible>
 
-    <SectionCollapsible title="Backplate">
-      <SurfaceMaterialInput
-        :surface-type="config.backplateSurfaceType"
-        :wood-type="config.backplateWoodType"
-        :wood-color-mode="config.backplateWoodColorMode"
-        :wood-color="config.backplateWoodColor"
-        :finish="config.backplateFinish"
-        :color="config.backplateColor"
-        @update:surface-type="set('backplateSurfaceType', $event)"
-        @update:wood-type="set('backplateWoodType', $event)"
-        @update:wood-color-mode="set('backplateWoodColorMode', $event)"
-        @update:wood-color="set('backplateWoodColor', $event)"
-        @update:finish="set('backplateFinish', $event)"
-        @update:color="set('backplateColor', $event)"
-      />
-    </SectionCollapsible>
-
     <SectionCollapsible title="Frame">
       <SliderInput v-model="frameDepth" label="Frame Depth" :min="0" :max="frameDepthMax" suffix="mm" />
       <template v-if="frameDepth > 0">
@@ -176,6 +159,23 @@ const frameDepthMax = computed(() => 200 + props.config.minBlockDepth)
           @update:color="set('frameColor', $event)"
         />
       </template>
+    </SectionCollapsible>
+
+    <SectionCollapsible title="Backplate">
+      <SurfaceMaterialInput
+        :surface-type="config.backplateSurfaceType"
+        :wood-type="config.backplateWoodType"
+        :wood-color-mode="config.backplateWoodColorMode"
+        :wood-color="config.backplateWoodColor"
+        :finish="config.backplateFinish"
+        :color="config.backplateColor"
+        @update:surface-type="set('backplateSurfaceType', $event)"
+        @update:wood-type="set('backplateWoodType', $event)"
+        @update:wood-color-mode="set('backplateWoodColorMode', $event)"
+        @update:wood-color="set('backplateWoodColor', $event)"
+        @update:finish="set('backplateFinish', $event)"
+        @update:color="set('backplateColor', $event)"
+      />
     </SectionCollapsible>
   </div>
 </template>

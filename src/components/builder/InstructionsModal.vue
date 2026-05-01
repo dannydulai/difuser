@@ -122,16 +122,40 @@ const angledPairs = computed(() => cutList.value.totalPairs - cutList.value.flat
           <p class="step-desc">
             Place blocks in a
             {{ props.config.panelCols }} &times; {{ props.config.panelRows }} grid
-            with {{ props.config.gap }}mm gaps, rotating each wedge to a random
-            orientation. Glue flat-side down onto the backplate.
+            with {{ props.config.gap }}mm gaps.
+            Each cell shows <strong>Group-Direction</strong> — the group number
+            and which way the thick side faces
+            (U=up, D=down, L=left, R=right).
+            Glue flat-side down onto the backplate.
             <template v-if="props.config.frameDepth > 0">
               Attach the frame around the perimeter.
             </template>
           </p>
-          <p class="step-note">
-            The exact rotation of each block doesn't matter for acoustics —
-            random placement diffuses sound effectively.
-          </p>
+
+          <div class="assembly-map-wrap">
+            <table class="assembly-map">
+              <tbody>
+                <tr v-for="(row, r) in cutList.assembly.cells" :key="r">
+                  <td
+                    v-for="(cell, c) in row"
+                    :key="c"
+                    class="assembly-cell"
+                    :class="{ flat: cell.angle === 0 }"
+                  >
+                    <span class="cell-group">{{ cell.group }}</span><span class="cell-dir">{{ cell.angle === 0 ? '' : cell.dir }}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Legend -->
+          <div class="assembly-legend">
+            <div v-for="(group, i) in cutList.angleGroups" :key="group.angle" class="legend-item">
+              <span class="legend-num">{{ i + 1 }}</span>
+              <span class="legend-desc">= {{ group.angle }}°</span>
+            </div>
+          </div>
         </section>
       </div>
     </div>
@@ -373,6 +397,58 @@ const angledPairs = computed(() => cutList.value.totalPairs - cutList.value.flat
 }
 .stat-value.highlight {
   color: var(--accent);
+}
+
+/* Assembly map */
+.assembly-map-wrap {
+  overflow-x: auto;
+  margin: 12px 0;
+  padding-bottom: 4px;
+}
+.assembly-map {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+.assembly-cell {
+  border: 1px solid var(--border);
+  padding: 4px 2px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  min-width: 32px;
+  background: var(--surface-0);
+}
+.assembly-cell.flat {
+  opacity: 0.5;
+}
+.cell-group {
+  color: var(--accent);
+  font-weight: 600;
+}
+.cell-dir {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.assembly-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+}
+.legend-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: var(--accent);
+}
+.legend-desc {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
 }
 
 @media (max-width: 768px) {
