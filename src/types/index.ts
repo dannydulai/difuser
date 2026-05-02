@@ -3,7 +3,7 @@ export type Finish = 'Natural' | 'Matte' | 'Satin' | 'Gloss'
 export type ColorMode = 'Natural wood' | 'Solid color' | 'Gradient'
 export type WoodColorMode = 'Natural wood' | 'Solid color'
 export type SurfaceType = 'Wood' | 'Metal' | 'Brushed Aluminum' | 'Painted Wood'
-export type LayoutMode = 'Random' | 'QRD' | 'Mirror H' | 'Mirror V' | 'Quad' | 'Rotational' | 'Gaussian' | 'Perlin' | 'Radial' | 'Wave'
+export type LayoutMode = 'Random' | 'QRD' | 'Mirror H' | 'Mirror V' | 'Quad' | 'Rotational' | 'Gaussian' | 'Perlin' | 'Radial' | 'Wave' | 'Mixed'
 
 export interface DiffuserConfig {
   // Panel (in blocks)
@@ -19,6 +19,7 @@ export interface DiffuserConfig {
   // Layout & angles
   layoutMode: LayoutMode
   qrdPrime: number
+  mixedVariety: number  // 0–100, how aggressively to use larger blocks
   minAngle: number
   maxAngle: number
   minBlockDepth: number
@@ -73,6 +74,7 @@ export const DEFAULT_CONFIG: DiffuserConfig = {
   gap: 2,
   layoutMode: 'Random',
   qrdPrime: 7,
+  mixedVariety: 40,
   minAngle: 20,
   maxAngle: 40,
   minBlockDepth: 10,

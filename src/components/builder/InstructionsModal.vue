@@ -55,8 +55,8 @@ const angledPairs = computed(() => cutList.value.totalPairs - cutList.value.flat
           </p>
 
           <div class="cut-cards">
-            <div v-for="(group, i) in cutList.angleGroups" :key="group.angle" class="cut-card">
-              <div class="cut-card-label">Group {{ i + 1 }}</div>
+            <div v-for="(group, i) in cutList.angleGroups" :key="i" class="cut-card">
+              <div class="cut-card-label">Group {{ i + 1 }}<template v-if="group.sizeLabel"> &middot; {{ group.sizeLabel }}</template></div>
               <div class="cut-card-row">
                 <span class="cut-card-qty">{{ group.pairCount }}</span>
                 <span class="cut-card-at">@</span>
@@ -136,14 +136,17 @@ const angledPairs = computed(() => cutList.value.totalPairs - cutList.value.flat
             <table class="assembly-map">
               <tbody>
                 <tr v-for="(row, r) in cutList.assembly.cells" :key="r">
-                  <td
-                    v-for="(cell, c) in row"
-                    :key="c"
-                    class="assembly-cell"
-                    :class="{ flat: cell.angle === 0 }"
-                  >
-                    <span class="cell-group">{{ cell.group }}</span><span class="cell-dir">{{ cell.angle === 0 ? '' : cell.dir }}</span>
-                  </td>
+                  <template v-for="(cell, c) in row" :key="c">
+                    <td
+                      v-if="cell.isOrigin"
+                      class="assembly-cell"
+                      :class="{ flat: cell.angle === 0, multi: cell.spanCols > 1 || cell.spanRows > 1 }"
+                      :colspan="cell.spanCols > 1 ? cell.spanCols : undefined"
+                      :rowspan="cell.spanRows > 1 ? cell.spanRows : undefined"
+                    >
+                      <span class="cell-group">{{ cell.group }}</span><span class="cell-dir">{{ cell.angle === 0 ? '' : cell.dir }}</span>
+                    </td>
+                  </template>
                 </tr>
               </tbody>
             </table>
@@ -420,6 +423,9 @@ const angledPairs = computed(() => cutList.value.totalPairs - cutList.value.flat
 }
 .assembly-cell.flat {
   opacity: 0.5;
+}
+.assembly-cell.multi {
+  background: var(--surface-2);
 }
 .cell-group {
   color: var(--accent);

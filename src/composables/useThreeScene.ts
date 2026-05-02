@@ -322,11 +322,15 @@ export function useThreeScene(
         } : {}),
       })
 
-      const geo = createWedgeGeometry(bw, bh, minBd, block.angle, block.rotation)
+      // Block dimensions — account for spanning multiple cells
+      const blockActualW = block.spanCols * bw + (block.spanCols - 1) * gap
+      const blockActualH = block.spanRows * bh + (block.spanRows - 1) * gap
+
+      const geo = createWedgeGeometry(blockActualW, blockActualH, minBd, block.angle, block.rotation)
       const mesh = new THREE.Mesh(geo, mat)
 
-      const x = startX + block.col * (bw + gap) + bw / 2
-      const y = startY + block.row * (bh + gap) + bh / 2
+      const x = startX + block.col * (bw + gap) + blockActualW / 2
+      const y = startY + block.row * (bh + gap) + blockActualH / 2
       mesh.position.set(x, y, 0)
 
       mesh.castShadow = true

@@ -32,6 +32,7 @@ const lockBlockSize = field('lockBlockSize')
 const gap = field('gap')
 const minBlockDepth = field('minBlockDepth')
 const layoutMode = field('layoutMode')
+const mixedVariety = field('mixedVariety')
 const minAngle = field('minAngle')
 const maxAngle = field('maxAngle')
 const randomSeed = field('randomSeed')
@@ -74,7 +75,7 @@ watch(maxAngle, (val) => {
 const woodTypes = ['Oak', 'Walnut', 'Maple', 'Cherry', 'Birch', 'Pine']
 const finishes = ['Natural', 'Matte', 'Satin', 'Gloss']
 const colorModes = ['Natural wood', 'Solid color', 'Gradient']
-const layoutModes = ['Random', 'QRD', 'Mirror H', 'Mirror V', 'Quad', 'Rotational', 'Gaussian', 'Perlin', 'Radial', 'Wave']
+const layoutModes = ['Random', 'QRD', 'Mirror H', 'Mirror V', 'Quad', 'Rotational', 'Gaussian', 'Perlin', 'Radial', 'Wave', 'Mixed']
 const qrdPrimes = ['5', '7', '11', '13', '17', '19', '23', '29', '31', '37']
 
 const layoutDescriptions: Record<string, string> = {
@@ -88,6 +89,7 @@ const layoutDescriptions: Record<string, string> = {
   'Perlin': 'Smooth organic noise. Neighboring blocks have similar angles, creating a flowing terrain effect.',
   'Radial': 'Angles increase outward from the center, creating a bullseye pattern.',
   'Wave': 'Sinusoidal interference pattern. Seed changes the phase.',
+  'Mixed': 'Variable block sizes — 1x1, 2x1, 1x2, and 2x2 blocks packed together. Variety controls how many large blocks appear.',
 }
 
 const qrdPrimeStr = computed({
@@ -135,6 +137,7 @@ const frameDepthMax = computed(() => 200 + props.config.minBlockDepth)
       <SelectInput v-model="layoutMode" label="Layout" :options="layoutModes" />
       <p class="layout-desc">{{ layoutDescriptions[layoutMode as string] }}</p>
       <SelectInput v-if="layoutMode === 'QRD'" v-model="qrdPrimeStr" label="QRD Prime" :options="qrdPrimes" />
+      <SliderInput v-if="layoutMode === 'Mixed'" v-model="mixedVariety" label="Variety" :min="0" :max="100" suffix="%" />
       <SliderInput v-model="minAngle" label="Min Angle" :min="0" :max="45" :step="5" suffix="deg" />
       <SliderInput v-model="maxAngle" label="Max Angle" :min="0" :max="45" :step="5" suffix="deg" />
       <div class="seed-row">

@@ -4,20 +4,20 @@ import { createSeededRandom, seededRandomInRange } from './useSeededRandom'
 export interface BlockSpec {
   row: number
   col: number
+  spanCols: number    // how many grid columns this block spans (default 1)
+  spanRows: number    // how many grid rows this block spans (default 1)
   angle: number       // degrees (0–45)
   rotation: number    // radians (0–2π)
   pairIndex: number
   pairSide: 'A' | 'B'
 }
 
-// Snap angle to nearest 5-degree increment within min/max range
 function snapAngle(angle: number, min: number, max: number): number {
   const snapped = Math.round(angle / 5) * 5
   return Math.max(min, Math.min(max, snapped))
 }
 
 // ─── Angle grid generators ───
-// Each returns a 2D array of angles (degrees). Rotation is assigned separately.
 
 function randomAngles(
   rows: number, cols: number,
@@ -28,14 +28,13 @@ function randomAngles(
   for (let r = 0; r < rows; r++) {
     const row: number[] = []
     for (let c = 0; c < cols; c++) {
-      // Pair-based: even indices get new angle, odd reuse previous
       const idx = r * cols + c
       if (idx % 2 === 0) {
         row.push(seededRandomInRange(rng, min, max, 5))
       } else {
         row.push(grid.length > 0 && row.length === 0
-          ? grid[r - 1][cols - 1]  // last of previous row
-          : row[row.length - 1])    // previous in same row
+          ? grid[r - 1][cols - 1]
+          : row[row.length - 1])
       }
     }
     grid.push(row)
@@ -48,8 +47,6 @@ function qrdAngles(
   min: number, max: number,
   prime: number
 ): number[][] {
-  // 1D QRD sequence tiled across columns, repeated per row
-  // depth[n] = (n²) mod prime, mapped to angle range
   const maxDepth = prime - 1
   const grid: number[][] = []
   for (let r = 0; r < rows; r++) {
@@ -74,11 +71,9 @@ function mirrorHAngles(
   const grid: number[][] = []
   for (let r = 0; r < rows; r++) {
     const row: number[] = []
-    // Generate left half
     for (let c = 0; c < halfCols; c++) {
       row.push(seededRandomInRange(rng, min, max, 5))
     }
-    // Mirror to right half
     for (let c = halfCols; c < cols; c++) {
       row.push(row[cols - 1 - c])
     }
@@ -94,7 +89,6 @@ function mirrorVAngles(
 ): number[][] {
   const halfRows = Math.ceil(rows / 2)
   const grid: number[][] = []
-  // Generate top half
   for (let r = 0; r < halfRows; r++) {
     const row: number[] = []
     for (let c = 0; c < cols; c++) {
@@ -102,7 +96,6 @@ function mirrorVAngles(
     }
     grid.push(row)
   }
-  // Mirror to bottom half
   for (let r = halfRows; r < rows; r++) {
     grid.push([...grid[rows - 1 - r]])
   }
@@ -117,7 +110,6 @@ function quadAngles(
   const halfRows = Math.ceil(rows / 2)
   const halfCols = Math.ceil(cols / 2)
   const grid: number[][] = []
-  // Generate top-left quadrant
   for (let r = 0; r < halfRows; r++) {
     const row: number[] = []
     for (let c = 0; c < halfCols; c++) {
@@ -125,13 +117,11 @@ function quadAngles(
     }
     grid.push(row)
   }
-  // Mirror horizontally to fill top half
   for (let r = 0; r < halfRows; r++) {
     for (let c = halfCols; c < cols; c++) {
       grid[r][c] = grid[r][cols - 1 - c]
     }
   }
-  // Mirror vertically to fill bottom half
   for (let r = halfRows; r < rows; r++) {
     grid.push([...grid[rows - 1 - r]])
   }
@@ -145,16 +135,13 @@ function rotationalAngles(
 ): number[][] {
   const total = rows * cols
   const half = Math.ceil(total / 2)
-  // Generate first half
   const flat: number[] = []
   for (let i = 0; i < half; i++) {
     flat.push(seededRandomInRange(rng, min, max, 5))
   }
-  // Fill second half with 180° rotational mapping
   for (let i = half; i < total; i++) {
     flat.push(flat[total - 1 - i])
   }
-  // Convert to 2D
   const grid: number[][] = []
   for (let r = 0; r < rows; r++) {
     grid.push(flat.slice(r * cols, (r + 1) * cols))
@@ -173,7 +160,6 @@ function gaussianAngles(
   for (let r = 0; r < rows; r++) {
     const row: number[] = []
     for (let c = 0; c < cols; c++) {
-      // Box-Muller transform
       const u1 = Math.max(1e-10, rng())
       const u2 = rng()
       const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
@@ -190,8 +176,7 @@ function perlinAngles(
   min: number, max: number,
   rng: () => number
 ): number[][] {
-  // Simple 2D value noise with cosine interpolation
-  const gridSize = 4 // noise grid cells — gives smooth variation across ~4 blocks
+  const gridSize = 4
   const noiseW = Math.ceil(cols / gridSize) + 2
   const noiseH = Math.ceil(rows / gridSize) + 2
   const noise: number[] = []
@@ -211,9 +196,7 @@ function perlinAngles(
     const v10 = noise[iy * noiseW + ix + 1] ?? 0.5
     const v01 = noise[(iy + 1) * noiseW + ix] ?? 0.5
     const v11 = noise[(iy + 1) * noiseW + ix + 1] ?? 0.5
-    const top = cosLerp(v00, v10, fx)
-    const bot = cosLerp(v01, v11, fx)
-    return cosLerp(top, bot, fy)
+    return cosLerp(cosLerp(v00, v10, fx), cosLerp(v01, v11, fx), fy)
   }
 
   const grid: number[][] = []
@@ -270,10 +253,87 @@ function waveAngles(
   return grid
 }
 
+// ─── Mixed block sizes ───
+
+interface PackedBlock {
+  row: number
+  col: number
+  spanCols: number
+  spanRows: number
+}
+
+function generateMixedPacking(
+  rows: number, cols: number,
+  variety: number, // 0–100
+  rng: () => number
+): PackedBlock[] {
+  // Probability of trying a larger block
+  const prob = variety / 100
+
+  // Track which cells are occupied
+  const occupied: boolean[][] = []
+  for (let r = 0; r < rows; r++) {
+    occupied.push(new Array(cols).fill(false))
+  }
+
+  const blocks: PackedBlock[] = []
+
+  function canPlace(r: number, c: number, sr: number, sc: number): boolean {
+    if (r + sr > rows || c + sc > cols) return false
+    for (let dr = 0; dr < sr; dr++) {
+      for (let dc = 0; dc < sc; dc++) {
+        if (occupied[r + dr][c + dc]) return false
+      }
+    }
+    return true
+  }
+
+  function place(r: number, c: number, sr: number, sc: number) {
+    for (let dr = 0; dr < sr; dr++) {
+      for (let dc = 0; dc < sc; dc++) {
+        occupied[r + dr][c + dc] = true
+      }
+    }
+    blocks.push({ row: r, col: c, spanRows: sr, spanCols: sc })
+  }
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (occupied[r][c]) continue
+
+      if (rng() < prob) {
+        // Try to place a larger block. Pick a random size.
+        const roll = rng()
+        if (roll < 0.15 && canPlace(r, c, 2, 2)) {
+          place(r, c, 2, 2)
+          continue
+        } else if (roll < 0.5 && canPlace(r, c, 1, 2)) {
+          place(r, c, 1, 2)
+          continue
+        } else if (roll < 0.85 && canPlace(r, c, 2, 1)) {
+          place(r, c, 2, 1)
+          continue
+        }
+      }
+
+      // Default: 1x1
+      place(r, c, 1, 1)
+    }
+  }
+
+  return blocks
+}
+
 // ─── Main entry point ───
 
 export function generateBlockLayout(config: DiffuserConfig): BlockSpec[] {
   const { panelCols: cols, panelRows: rows, minAngle, maxAngle, layoutMode, qrdPrime, randomSeed } = config
+
+  // Mixed mode has its own path — packing + per-block angles
+  if (layoutMode === 'Mixed') {
+    return generateMixedLayout(config)
+  }
+
   const rng = createSeededRandom(randomSeed)
 
   // Generate angle grid based on layout mode
@@ -306,14 +366,13 @@ export function generateBlockLayout(config: DiffuserConfig): BlockSpec[] {
     case 'Wave':
       angleGrid = waveAngles(rows, cols, minAngle, maxAngle, rng)
       break
-    default: // Random — pair-based
+    default:
       angleGrid = randomAngles(rows, cols, minAngle, maxAngle, rng)
   }
 
-  // Generate rotation per block (always random, seeded)
+  // Generate rotation per block
   const rotRng = createSeededRandom(randomSeed + 3571)
 
-  // Build block specs
   const blocks: BlockSpec[] = []
   let pairIdx = 0
 
@@ -323,14 +382,13 @@ export function generateBlockLayout(config: DiffuserConfig): BlockSpec[] {
       const angle = angleGrid[r][c]
       const rotation = rotRng() * Math.PI * 2
 
-      // For Random mode, pair consecutive blocks (same angle, opposite rotation)
       if (layoutMode === 'Random') {
         if (idx % 2 === 0) {
-          blocks.push({ row: r, col: c, angle, rotation, pairIndex: pairIdx, pairSide: 'A' })
+          blocks.push({ row: r, col: c, spanCols: 1, spanRows: 1, angle, rotation, pairIndex: pairIdx, pairSide: 'A' })
         } else {
           const prev = blocks[blocks.length - 1]
           blocks.push({
-            row: r, col: c,
+            row: r, col: c, spanCols: 1, spanRows: 1,
             angle: prev.angle,
             rotation: (prev.rotation + Math.PI) % (Math.PI * 2),
             pairIndex: pairIdx,
@@ -339,14 +397,41 @@ export function generateBlockLayout(config: DiffuserConfig): BlockSpec[] {
           pairIdx++
         }
       } else {
-        // Non-random modes: each block is independent
-        blocks.push({ row: r, col: c, angle, rotation, pairIndex: idx, pairSide: 'A' })
+        blocks.push({ row: r, col: c, spanCols: 1, spanRows: 1, angle, rotation, pairIndex: idx, pairSide: 'A' })
       }
     }
   }
-  // Handle last unpaired block for Random mode
-  if (layoutMode === 'Random' && blocks.length > 0 && blocks[blocks.length - 1].pairSide === 'A') {
-    // It's already set up as 'A', just won't have a 'B' partner — that's fine
+
+  return blocks
+}
+
+function generateMixedLayout(config: DiffuserConfig): BlockSpec[] {
+  const { panelCols: cols, panelRows: rows, minAngle, maxAngle, randomSeed, mixedVariety } = config
+  const rng = createSeededRandom(randomSeed)
+
+  // Generate the packing
+  const packed = generateMixedPacking(rows, cols, mixedVariety, rng)
+
+  // Assign angles and rotations
+  const angleRng = createSeededRandom(randomSeed + 1013)
+  const rotRng = createSeededRandom(randomSeed + 3571)
+
+  const blocks: BlockSpec[] = []
+  for (let i = 0; i < packed.length; i++) {
+    const p = packed[i]
+    const angle = seededRandomInRange(angleRng, minAngle, maxAngle, 5)
+    const rotation = rotRng() * Math.PI * 2
+
+    blocks.push({
+      row: p.row,
+      col: p.col,
+      spanCols: p.spanCols,
+      spanRows: p.spanRows,
+      angle,
+      rotation,
+      pairIndex: i,
+      pairSide: 'A',
+    })
   }
 
   return blocks
