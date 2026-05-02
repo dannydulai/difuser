@@ -77,6 +77,19 @@ const colorModes = ['Natural wood', 'Solid color', 'Gradient']
 const layoutModes = ['Random', 'QRD', 'Mirror H', 'Mirror V', 'Quad', 'Rotational', 'Gaussian', 'Perlin', 'Radial', 'Wave']
 const qrdPrimes = ['5', '7', '11', '13', '17', '19', '23', '29', '31', '37']
 
+const layoutDescriptions: Record<string, string> = {
+  'Random': 'Fully random angles. Blocks are paired for efficient two-from-one cutting.',
+  'QRD': 'Quadratic Residue Diffuser. Mathematically optimal scattering pattern used in professional studios. The prime number controls sequence length.',
+  'Mirror H': 'Random pattern mirrored left to right for a symmetric look.',
+  'Mirror V': 'Random pattern mirrored top to bottom.',
+  'Quad': 'Random pattern mirrored across both axes. Symmetric in all four quadrants.',
+  'Rotational': 'Random pattern with 180-degree rotational symmetry.',
+  'Gaussian': 'Bell curve distribution. Most blocks cluster near the middle angle, fewer at the extremes.',
+  'Perlin': 'Smooth organic noise. Neighboring blocks have similar angles, creating a flowing terrain effect.',
+  'Radial': 'Angles increase outward from the center, creating a bullseye pattern.',
+  'Wave': 'Sinusoidal interference pattern. Seed changes the phase.',
+}
+
 const qrdPrimeStr = computed({
   get: () => String(props.config.qrdPrime),
   set: (v) => set('qrdPrime', parseInt(v)),
@@ -120,6 +133,7 @@ const frameDepthMax = computed(() => 200 + props.config.minBlockDepth)
 
     <SectionCollapsible title="Layout & Angles">
       <SelectInput v-model="layoutMode" label="Layout" :options="layoutModes" />
+      <p class="layout-desc">{{ layoutDescriptions[layoutMode as string] }}</p>
       <SelectInput v-if="layoutMode === 'QRD'" v-model="qrdPrimeStr" label="QRD Prime" :options="qrdPrimes" />
       <SliderInput v-model="minAngle" label="Min Angle" :min="0" :max="45" :step="5" suffix="deg" />
       <SliderInput v-model="maxAngle" label="Max Angle" :min="0" :max="45" :step="5" suffix="deg" />
@@ -239,6 +253,12 @@ const frameDepthMax = computed(() => 200 + props.config.minBlockDepth)
 .btn-lock svg {
   width: 14px;
   height: 14px;
+}
+.layout-desc {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted);
+  margin: -4px 0 8px;
 }
 .seed-row {
   display: flex;
