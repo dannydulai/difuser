@@ -31,6 +31,7 @@ const blockHeight = field('blockHeight')
 const lockBlockSize = field('lockBlockSize')
 const gap = field('gap')
 const minBlockDepth = field('minBlockDepth')
+const layoutMode = field('layoutMode')
 const minAngle = field('minAngle')
 const maxAngle = field('maxAngle')
 const randomSeed = field('randomSeed')
@@ -73,6 +74,13 @@ watch(maxAngle, (val) => {
 const woodTypes = ['Oak', 'Walnut', 'Maple', 'Cherry', 'Birch', 'Pine']
 const finishes = ['Natural', 'Matte', 'Satin', 'Gloss']
 const colorModes = ['Natural wood', 'Solid color', 'Gradient']
+const layoutModes = ['Random', 'QRD', 'Mirror H', 'Mirror V', 'Quad', 'Rotational', 'Gaussian', 'Perlin', 'Radial', 'Wave']
+const qrdPrimes = ['5', '7', '11', '13', '17', '19', '23', '29', '31', '37']
+
+const qrdPrimeStr = computed({
+  get: () => String(props.config.qrdPrime),
+  set: (v) => set('qrdPrime', parseInt(v)),
+})
 
 const frameDepthMax = computed(() => 200 + props.config.minBlockDepth)
 </script>
@@ -110,7 +118,9 @@ const frameDepthMax = computed(() => 200 + props.config.minBlockDepth)
       <SliderInput v-model="gap" label="Gap" :min="0" :max="20" suffix="mm" />
     </SectionCollapsible>
 
-    <SectionCollapsible title="Angle Settings">
+    <SectionCollapsible title="Layout & Angles">
+      <SelectInput v-model="layoutMode" label="Layout" :options="layoutModes" />
+      <SelectInput v-if="layoutMode === 'QRD'" v-model="qrdPrimeStr" label="QRD Prime" :options="qrdPrimes" />
       <SliderInput v-model="minAngle" label="Min Angle" :min="0" :max="45" :step="5" suffix="deg" />
       <SliderInput v-model="maxAngle" label="Max Angle" :min="0" :max="45" :step="5" suffix="deg" />
       <div class="seed-row">
