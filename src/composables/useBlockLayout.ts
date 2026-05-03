@@ -460,14 +460,15 @@ function applyDensity(blocks: BlockSpec[], config: DiffuserConfig): BlockSpec[] 
         return true
     }
 
-    // keepProb: 1 at solid edge (t=0), 0 at empty edge (t=1)
-    const keepProb = 1 - t
+    // keepProb: 1.0 for most of the panel, dropping to 0 only at the far edge
+    // Use a power curve so density stays high until the last few columns
+    const keepProb = Math.pow(1 - t, 0.3)
 
-    // Noise dithers the boundary
-    const noiseVal = sample(block.col / gridSize, block.row / gridSize) * 0.7
-      + fineRng() * 0.3
+    // Small amount of noise to dither the edge — not enough to eat deep into the panel
+    const noiseVal = (sample(block.col / gridSize, block.row / gridSize) - 0.5) * 0.15
+      + (fineRng() - 0.5) * 0.1
 
-    return noiseVal < keepProb
+    return keepProb + noiseVal > 0.5
   })
 }
 
