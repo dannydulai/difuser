@@ -10,6 +10,7 @@ import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { STLExporter } from 'three/addons/exporters/STLExporter.js'
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
+import { exportCollada } from './useExportCollada'
 import type { DiffuserConfig, SurfaceType, WoodType, Finish } from '../types'
 import { WOOD_COLORS } from '../types'
 import { createSeededRandom } from './useSeededRandom'
@@ -599,5 +600,6 @@ export function useThreeScene(
     fitToView,
     exportSTL,
     exportGLTF,
+    exportDAE: (filename: string) => { if (diffuserGroup) exportCollada(diffuserGroup, filename) },
   }
 }

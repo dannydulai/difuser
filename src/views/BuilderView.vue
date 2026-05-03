@@ -26,7 +26,7 @@ onMounted(() => {
   }
 })
 
-const { fitToView, exportSTL, exportGLTF } = useThreeScene(viewportRef, config as any)
+const { fitToView, exportSTL, exportGLTF, exportDAE } = useThreeScene(viewportRef, config as any)
 const showExportMenu = ref(false)
 
 function onUpdate(key: keyof DiffuserConfig, value: any) {
@@ -167,11 +167,14 @@ function goBack() {
           <span class="btn-label">Export</span>
         </button>
         <div v-if="showExportMenu" class="export-menu">
-          <button @click="exportSTL(project?.name ?? 'difuser'); showExportMenu = false">
-            <strong>STL</strong> <span>SketchUp, 3D printing</span>
+          <button @click="exportDAE(project?.name ?? 'difuser'); showExportMenu = false">
+            <strong>DAE</strong> <span>SketchUp, Blender (with colors)</span>
           </button>
           <button @click="exportGLTF(project?.name ?? 'difuser'); showExportMenu = false">
             <strong>GLTF</strong> <span>Blender, web (with colors)</span>
+          </button>
+          <button @click="exportSTL(project?.name ?? 'difuser'); showExportMenu = false">
+            <strong>STL</strong> <span>3D printing</span>
           </button>
         </div>
       </div>
