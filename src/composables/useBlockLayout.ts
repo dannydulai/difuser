@@ -444,20 +444,23 @@ function applyDensity(blocks: BlockSpec[], config: DiffuserConfig): BlockSpec[] 
   const fineRng = createSeededRandom(randomSeed + 7727)
 
   return blocks.filter((block) => {
-    // Left = 100% chance of keeping, right = 0% chance
-    // colT goes from 0 (left) to 1 (right)
+    // colT: 0 at left edge, 1 at right edge
     const colT = cols > 1 ? block.col / (cols - 1) : 0
 
-    // Keep probability: 1 at left edge, 0 at right edge
-    // The density slider scales the whole thing — at 100% density all blocks stay,
-    // at 0% density none stay
-    const keepProb = (1 - colT) * threshold
+    // Density controls where the fade boundary sits:
+    // 100% = boundary at far right (everything solid)
+    // 50%  = boundary in the middle (left solid, right empty)
+    // 0%   = boundary at far left (everything empty)
+    // We expand the range so there's room for the dithered transition
+    const fadeWidth = 0.3
+    const fadeCenter = threshold * (1 + fadeWidth) - fadeWidth / 2
+    const distFromEdge = fadeCenter - colT
 
     // Noise dithers the boundary
-    const noiseVal = sample(block.col / gridSize, block.row / gridSize) * 0.7
-      + fineRng() * 0.3
+    const noiseVal = (sample(block.col / gridSize, block.row / gridSize) - 0.5) * fadeWidth
+      + (fineRng() - 0.5) * fadeWidth * 0.4
 
-    return noiseVal < keepProb
+    return distFromEdge + noiseVal > 0
   })
 }
 
