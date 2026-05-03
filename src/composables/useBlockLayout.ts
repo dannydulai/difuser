@@ -444,9 +444,19 @@ function applyDensity(blocks: BlockSpec[], config: DiffuserConfig): BlockSpec[] 
   const fineRng = createSeededRandom(randomSeed + 7727)
 
   return blocks.filter((block) => {
-    const noiseVal = sample(block.col / gridSize, block.row / gridSize) * 0.7
-      + fineRng() * 0.3
-    return noiseVal < threshold
+    // Left-to-right gradient: position 0 = always solid, position 1 = most sparse
+    const colT = cols > 1 ? block.col / (cols - 1) : 0
+    // The density slider controls where the transition happens:
+    // At 100% density, everything is solid. At 50%, the right half starts emptying.
+    // At 0%, everything is empty.
+    const cutoff = threshold * 2 // scale so density=50 means halfway point is the edge
+    const base = cutoff - colT
+
+    // Add noise to roughen the transition edge
+    const noiseVal = (sample(block.col / gridSize, block.row / gridSize) - 0.5) * 0.4
+      + (fineRng() - 0.5) * 0.2
+
+    return base + noiseVal > 0
   })
 }
 
