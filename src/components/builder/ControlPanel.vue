@@ -32,6 +32,7 @@ const lockBlockSize = field('lockBlockSize')
 const gap = field('gap')
 const minBlockDepth = field('minBlockDepth')
 const blockFade = field('blockFade')
+const showBackplate = field('showBackplate')
 const layoutMode = field('layoutMode')
 const mixedVariety = field('mixedVariety')
 const minAngle = field('minAngle')
@@ -192,20 +193,26 @@ const frameDepthMax = computed(() => 200 + props.config.minBlockDepth)
     </SectionCollapsible>
 
     <SectionCollapsible title="Backplate">
-      <SurfaceMaterialInput
-        :surface-type="config.backplateSurfaceType"
-        :wood-type="config.backplateWoodType"
-        :wood-color-mode="config.backplateWoodColorMode"
-        :wood-color="config.backplateWoodColor"
-        :finish="config.backplateFinish"
-        :color="config.backplateColor"
-        @update:surface-type="set('backplateSurfaceType', $event)"
-        @update:wood-type="set('backplateWoodType', $event)"
-        @update:wood-color-mode="set('backplateWoodColorMode', $event)"
-        @update:wood-color="set('backplateWoodColor', $event)"
-        @update:finish="set('backplateFinish', $event)"
-        @update:color="set('backplateColor', $event)"
-      />
+      <label class="toggle-row">
+        <input type="checkbox" :checked="showBackplate" @change="showBackplate = !showBackplate" />
+        <span>Show backplate</span>
+      </label>
+      <template v-if="showBackplate">
+        <SurfaceMaterialInput
+          :surface-type="config.backplateSurfaceType"
+          :wood-type="config.backplateWoodType"
+          :wood-color-mode="config.backplateWoodColorMode"
+          :wood-color="config.backplateWoodColor"
+          :finish="config.backplateFinish"
+          :color="config.backplateColor"
+          @update:surface-type="set('backplateSurfaceType', $event)"
+          @update:wood-type="set('backplateWoodType', $event)"
+          @update:wood-color-mode="set('backplateWoodColorMode', $event)"
+          @update:wood-color="set('backplateWoodColor', $event)"
+          @update:finish="set('backplateFinish', $event)"
+          @update:color="set('backplateColor', $event)"
+        />
+      </template>
     </SectionCollapsible>
   </div>
 </template>
@@ -259,6 +266,21 @@ const frameDepthMax = computed(() => 200 + props.config.minBlockDepth)
 .btn-lock svg {
   width: 14px;
   height: 14px;
+}
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+.toggle-row input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
 }
 .layout-desc {
   font-size: 11px;

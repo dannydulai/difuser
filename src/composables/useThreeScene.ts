@@ -383,18 +383,20 @@ export function useThreeScene(
     }
 
     // Backplate
-    const bpW = hasFrame ? gridW + 2 * fo : gridW
-    const bpH = hasFrame ? gridH + 2 * fo : gridH
-    const backMat = buildSurfaceMaterial(
-      c.backplateSurfaceType, c.backplateWoodType, c.backplateFinish, c.backplateColor,
-      c.backplateWoodColorMode, c.backplateWoodColor
-    )
-    backMat.envMapIntensity = 0.05
-    const backGeo = new THREE.BoxGeometry(bpW, bpH, 0.02)
-    const backMesh = new THREE.Mesh(backGeo, backMat)
-    backMesh.position.set(0, 0, 0.01)
-    backMesh.receiveShadow = true
-    diffuserGroup.add(backMesh)
+    if (c.showBackplate) {
+      const bpW = hasFrame ? gridW + 2 * fo : gridW
+      const bpH = hasFrame ? gridH + 2 * fo : gridH
+      const backMat = buildSurfaceMaterial(
+        c.backplateSurfaceType, c.backplateWoodType, c.backplateFinish, c.backplateColor,
+        c.backplateWoodColorMode, c.backplateWoodColor
+      )
+      backMat.envMapIntensity = 0.05
+      const backGeo = new THREE.BoxGeometry(bpW, bpH, 0.02)
+      const backMesh = new THREE.Mesh(backGeo, backMat)
+      backMesh.position.set(0, 0, 0.01)
+      backMesh.receiveShadow = true
+      diffuserGroup.add(backMesh)
+    }
   }
 
   function init() {

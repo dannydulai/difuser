@@ -45,6 +45,7 @@ export interface DiffuserConfig {
   frameColor: string
 
   // Backplate surface
+  showBackplate: boolean
   backplateSurfaceType: SurfaceType
   backplateWoodType: WoodType
   backplateWoodColorMode: WoodColorMode
@@ -95,6 +96,7 @@ export const DEFAULT_CONFIG: DiffuserConfig = {
   frameWoodColor: '#5c4033',
   frameFinish: 'Satin',
   frameColor: '#3d2b1f',
+  showBackplate: true,
   backplateSurfaceType: 'Wood',
   backplateWoodType: 'Walnut',
   backplateWoodColorMode: 'Natural wood',
