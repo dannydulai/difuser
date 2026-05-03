@@ -26,7 +26,7 @@ onMounted(() => {
   }
 })
 
-const { fitToView } = useThreeScene(viewportRef, config as any)
+const { fitToView, exportOBJ } = useThreeScene(viewportRef, config as any)
 
 function onUpdate(key: keyof DiffuserConfig, value: any) {
   if (project.value) {
@@ -155,6 +155,14 @@ function goBack() {
           <path d="M2 3h12M2 6.5h8M2 10h10M2 13.5h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
         </svg>
         <span class="btn-label">Instructions</span>
+      </button>
+
+      <button class="btn-export" @click="exportOBJ(project?.name ?? 'difuser')" title="Export OBJ for SketchUp">
+        <svg viewBox="0 0 16 16" fill="none">
+          <path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        <span class="btn-label">Export</span>
       </button>
 
       <button class="btn-share" @click="shareProject" :title="shareCopied ? 'Copied!' : 'Copy share link'">
@@ -351,6 +359,7 @@ function goBack() {
   height: 14px;
 }
 .btn-instructions,
+.btn-export,
 .btn-share {
   display: flex;
   align-items: center;
@@ -367,12 +376,14 @@ function goBack() {
   flex-shrink: 0;
 }
 .btn-instructions:hover,
+.btn-export:hover,
 .btn-share:hover {
   background: var(--surface-3);
   color: var(--text-primary);
   border-color: var(--accent-dim);
 }
 .btn-instructions svg,
+.btn-export svg,
 .btn-share svg {
   width: 14px;
   height: 14px;

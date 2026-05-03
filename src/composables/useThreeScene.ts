@@ -8,6 +8,7 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js'
 
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
+import { OBJExporter } from 'three/addons/exporters/OBJExporter.js'
 import type { DiffuserConfig, SurfaceType, WoodType, Finish } from '../types'
 import { WOOD_COLORS } from '../types'
 import { createSeededRandom } from './useSeededRandom'
@@ -565,8 +566,22 @@ export function useThreeScene(
     controls.update()
   }
 
+  function exportOBJ(filename: string) {
+    if (!diffuserGroup) return
+    const exporter = new OBJExporter()
+    const result = exporter.parse(diffuserGroup)
+    const blob = new Blob([result], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename.endsWith('.obj') ? filename : `${filename}.obj`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return {
     rebuild: () => { if (diffuserGroup) buildDiffuser() },
     fitToView,
+    exportOBJ,
   }
 }
