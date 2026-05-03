@@ -402,7 +402,52 @@ export function generateBlockLayout(config: DiffuserConfig): BlockSpec[] {
     }
   }
 
-  return blocks
+  return applyDensity(blocks, config)
+}
+
+// ─── Density filter ───
+// Uses smooth noise to remove blocks organically rather than random scatter
+
+function applyDensity(blocks: BlockSpec[], config: DiffuserConfig): BlockSpec[] {
+  const density = config.blockDensity
+  if (density >= 100) return blocks
+
+  const { panelCols: cols, panelRows: rows, randomSeed } = config
+  const threshold = density / 100
+
+  // Generate smooth noise field for organic-looking removal
+  const noiseRng = createSeededRandom(randomSeed + 5881)
+  const gridSize = 3
+  const noiseW = Math.ceil(cols / gridSize) + 2
+  const noiseH = Math.ceil(rows / gridSize) + 2
+  const noise: number[] = []
+  for (let i = 0; i < noiseW * noiseH; i++) noise.push(noiseRng())
+
+  function cosLerp(a: number, b: number, t: number): number {
+    const f = (1 - Math.cos(t * Math.PI)) * 0.5
+    return a * (1 - f) + b * f
+  }
+
+  function sample(x: number, y: number): number {
+    const ix = Math.floor(x)
+    const iy = Math.floor(y)
+    const fx = x - ix
+    const fy = y - iy
+    const v00 = noise[iy * noiseW + ix] ?? 0.5
+    const v10 = noise[iy * noiseW + ix + 1] ?? 0.5
+    const v01 = noise[(iy + 1) * noiseW + ix] ?? 0.5
+    const v11 = noise[(iy + 1) * noiseW + ix + 1] ?? 0.5
+    return cosLerp(cosLerp(v00, v10, fx), cosLerp(v01, v11, fx), fy)
+  }
+
+  // Add a bit of fine noise so edges aren't too smooth
+  const fineRng = createSeededRandom(randomSeed + 7727)
+
+  return blocks.filter((block) => {
+    const noiseVal = sample(block.col / gridSize, block.row / gridSize) * 0.7
+      + fineRng() * 0.3
+    return noiseVal < threshold
+  })
 }
 
 function generateMixedLayout(config: DiffuserConfig): BlockSpec[] {

@@ -31,6 +31,7 @@ const blockHeight = field('blockHeight')
 const lockBlockSize = field('lockBlockSize')
 const gap = field('gap')
 const minBlockDepth = field('minBlockDepth')
+const blockDensity = field('blockDensity')
 const layoutMode = field('layoutMode')
 const mixedVariety = field('mixedVariety')
 const minAngle = field('minAngle')
@@ -131,6 +132,7 @@ const frameDepthMax = computed(() => 200 + props.config.minBlockDepth)
       </div>
       <SliderInput v-model="minBlockDepth" label="Min Depth" :min="2" :max="60" suffix="mm" />
       <SliderInput v-model="gap" label="Gap" :min="0" :max="20" suffix="mm" />
+      <SliderInput v-model="blockDensity" label="Density" :min="0" :max="100" suffix="%" />
     </SectionCollapsible>
 
     <SectionCollapsible title="Layout & Angles">

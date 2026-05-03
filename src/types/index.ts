@@ -20,6 +20,7 @@ export interface DiffuserConfig {
   layoutMode: LayoutMode
   qrdPrime: number
   mixedVariety: number  // 0–100, how aggressively to use larger blocks
+  blockDensity: number  // 0–100, percentage of cells that have blocks
   minAngle: number
   maxAngle: number
   minBlockDepth: number
@@ -75,6 +76,7 @@ export const DEFAULT_CONFIG: DiffuserConfig = {
   layoutMode: 'Random',
   qrdPrime: 7,
   mixedVariety: 40,
+  blockDensity: 100,
   minAngle: 20,
   maxAngle: 40,
   minBlockDepth: 10,
