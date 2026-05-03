@@ -460,8 +460,8 @@ function applyDensity(blocks: BlockSpec[], config: DiffuserConfig): BlockSpec[] 
         return true
     }
 
-    // Linear: 100% keep at t=0, 0% keep at t=1
-    const keepProb = 1 - t
+    // Linear: 100% keep at t=0, 15% keep at t=1
+    const keepProb = 1 - t * 0.85
 
     // Small noise to dither the transition
     const noiseVal = (sample(block.col / gridSize, block.row / gridSize) - 0.5) * 0.12
