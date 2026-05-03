@@ -8,7 +8,8 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js'
 
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
-import { OBJExporter } from 'three/addons/exporters/OBJExporter.js'
+import { STLExporter } from 'three/addons/exporters/STLExporter.js'
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
 import type { DiffuserConfig, SurfaceType, WoodType, Finish } from '../types'
 import { WOOD_COLORS } from '../types'
 import { createSeededRandom } from './useSeededRandom'
@@ -566,15 +567,27 @@ export function useThreeScene(
     controls.update()
   }
 
-  function exportOBJ(filename: string) {
+  function exportSTL(filename: string) {
     if (!diffuserGroup) return
-    const exporter = new OBJExporter()
-    const result = exporter.parse(diffuserGroup)
-    const blob = new Blob([result], { type: 'text/plain' })
+    const exporter = new STLExporter()
+    const result = exporter.parse(diffuserGroup, { binary: true })
+    const blob = new Blob([result], { type: 'application/octet-stream' })
+    downloadBlob(blob, filename.replace(/\.[^.]+$/, '') + '.stl')
+  }
+
+  async function exportGLTF(filename: string) {
+    if (!diffuserGroup) return
+    const exporter = new GLTFExporter()
+    const result = await exporter.parseAsync(diffuserGroup, { binary: true })
+    const blob = new Blob([result as ArrayBuffer], { type: 'application/octet-stream' })
+    downloadBlob(blob, filename.replace(/\.[^.]+$/, '') + '.glb')
+  }
+
+  function downloadBlob(blob: Blob, name: string) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = filename.endsWith('.obj') ? filename : `${filename}.obj`
+    a.download = name
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -582,6 +595,7 @@ export function useThreeScene(
   return {
     rebuild: () => { if (diffuserGroup) buildDiffuser() },
     fitToView,
-    exportOBJ,
+    exportSTL,
+    exportGLTF,
   }
 }

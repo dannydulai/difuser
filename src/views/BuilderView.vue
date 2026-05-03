@@ -26,7 +26,8 @@ onMounted(() => {
   }
 })
 
-const { fitToView, exportOBJ } = useThreeScene(viewportRef, config as any)
+const { fitToView, exportSTL, exportGLTF } = useThreeScene(viewportRef, config as any)
+const showExportMenu = ref(false)
 
 function onUpdate(key: keyof DiffuserConfig, value: any) {
   if (project.value) {
@@ -157,13 +158,23 @@ function goBack() {
         <span class="btn-label">Instructions</span>
       </button>
 
-      <button class="btn-export" @click="exportOBJ(project?.name ?? 'difuser')" title="Export OBJ for SketchUp">
-        <svg viewBox="0 0 16 16" fill="none">
-          <path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-        </svg>
-        <span class="btn-label">Export</span>
-      </button>
+      <div class="export-wrap">
+        <button class="btn-export" @click="showExportMenu = !showExportMenu" title="Export 3D model">
+          <svg viewBox="0 0 16 16" fill="none">
+            <path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          <span class="btn-label">Export</span>
+        </button>
+        <div v-if="showExportMenu" class="export-menu">
+          <button @click="exportSTL(project?.name ?? 'difuser'); showExportMenu = false">
+            <strong>STL</strong> <span>SketchUp, 3D printing</span>
+          </button>
+          <button @click="exportGLTF(project?.name ?? 'difuser'); showExportMenu = false">
+            <strong>GLTF</strong> <span>Blender, web (with colors)</span>
+          </button>
+        </div>
+      </div>
 
       <button class="btn-share" @click="shareProject" :title="shareCopied ? 'Copied!' : 'Copy share link'">
         <svg v-if="!shareCopied" viewBox="0 0 16 16" fill="none">
@@ -387,6 +398,52 @@ function goBack() {
 .btn-share svg {
   width: 14px;
   height: 14px;
+}
+.export-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.export-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  z-index: 50;
+}
+.export-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+.export-menu button:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+.export-menu strong {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+  min-width: 36px;
+}
+.export-menu span {
+  color: var(--text-muted);
+  font-size: 11px;
 }
 .header-brand {
   margin-left: auto;
