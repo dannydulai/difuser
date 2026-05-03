@@ -31,7 +31,7 @@ const blockHeight = field('blockHeight')
 const lockBlockSize = field('lockBlockSize')
 const gap = field('gap')
 const minBlockDepth = field('minBlockDepth')
-const blockDensity = field('blockDensity')
+const blockFade = field('blockFade')
 const layoutMode = field('layoutMode')
 const mixedVariety = field('mixedVariety')
 const minAngle = field('minAngle')
@@ -76,6 +76,7 @@ watch(maxAngle, (val) => {
 const woodTypes = ['Oak', 'Walnut', 'Maple', 'Cherry', 'Birch', 'Pine']
 const finishes = ['Natural', 'Matte', 'Satin', 'Gloss']
 const colorModes = ['Natural wood', 'Solid color', 'Gradient']
+const fadeOptions = ['None', 'Left to Right', 'Right to Left', 'Top to Bottom', 'Bottom to Top']
 const layoutModes = ['Random', 'QRD', 'Mirror H', 'Mirror V', 'Quad', 'Rotational', 'Gaussian', 'Perlin', 'Radial', 'Wave', 'Mixed']
 const qrdPrimes = ['5', '7', '11', '13', '17', '19', '23', '29', '31', '37']
 
@@ -132,7 +133,7 @@ const frameDepthMax = computed(() => 200 + props.config.minBlockDepth)
       </div>
       <SliderInput v-model="minBlockDepth" label="Min Depth" :min="2" :max="60" suffix="mm" />
       <SliderInput v-model="gap" label="Gap" :min="0" :max="20" suffix="mm" />
-      <SliderInput v-model="blockDensity" label="Density" :min="0" :max="100" suffix="%" />
+      <SelectInput v-model="blockFade" label="Fade" :options="fadeOptions" />
     </SectionCollapsible>
 
     <SectionCollapsible title="Layout & Angles">

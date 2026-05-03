@@ -405,17 +405,15 @@ export function generateBlockLayout(config: DiffuserConfig): BlockSpec[] {
   return applyDensity(blocks, config)
 }
 
-// ─── Density filter ───
-// Uses smooth noise to remove blocks organically rather than random scatter
+// ─── Fade filter ───
+// Directional fade: 100% dense at one edge, 0% at the opposite
 
 function applyDensity(blocks: BlockSpec[], config: DiffuserConfig): BlockSpec[] {
-  const density = config.blockDensity
-  if (density >= 100) return blocks
+  if (config.blockFade === 'None') return blocks
 
   const { panelCols: cols, panelRows: rows, randomSeed } = config
-  const threshold = density / 100
 
-  // Generate smooth noise field for organic-looking removal
+  // Generate smooth noise for dithered transition
   const noiseRng = createSeededRandom(randomSeed + 5881)
   const gridSize = 3
   const noiseW = Math.ceil(cols / gridSize) + 2
@@ -440,27 +438,36 @@ function applyDensity(blocks: BlockSpec[], config: DiffuserConfig): BlockSpec[] 
     return cosLerp(cosLerp(v00, v10, fx), cosLerp(v01, v11, fx), fy)
   }
 
-  // Add a bit of fine noise so edges aren't too smooth
   const fineRng = createSeededRandom(randomSeed + 7727)
 
   return blocks.filter((block) => {
-    // colT: 0 at left edge, 1 at right edge
-    const colT = cols > 1 ? block.col / (cols - 1) : 0
+    // t: 0 at the solid edge, 1 at the empty edge
+    let t: number
+    switch (config.blockFade) {
+      case 'Left to Right':
+        t = cols > 1 ? block.col / (cols - 1) : 0
+        break
+      case 'Right to Left':
+        t = cols > 1 ? 1 - block.col / (cols - 1) : 0
+        break
+      case 'Top to Bottom':
+        t = rows > 1 ? block.row / (rows - 1) : 0
+        break
+      case 'Bottom to Top':
+        t = rows > 1 ? 1 - block.row / (rows - 1) : 0
+        break
+      default:
+        return true
+    }
 
-    // Density controls where the fade boundary sits:
-    // 100% = boundary at far right (everything solid)
-    // 50%  = boundary in the middle (left solid, right empty)
-    // 0%   = boundary at far left (everything empty)
-    // We expand the range so there's room for the dithered transition
-    const fadeWidth = 0.3
-    const fadeCenter = threshold * (1 + fadeWidth) - fadeWidth / 2
-    const distFromEdge = fadeCenter - colT
+    // keepProb: 1 at solid edge (t=0), 0 at empty edge (t=1)
+    const keepProb = 1 - t
 
     // Noise dithers the boundary
-    const noiseVal = (sample(block.col / gridSize, block.row / gridSize) - 0.5) * fadeWidth
-      + (fineRng() - 0.5) * fadeWidth * 0.4
+    const noiseVal = sample(block.col / gridSize, block.row / gridSize) * 0.7
+      + fineRng() * 0.3
 
-    return distFromEdge + noiseVal > 0
+    return noiseVal < keepProb
   })
 }
 
