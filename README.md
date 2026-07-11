@@ -2,7 +2,7 @@
 
 A visual builder for acoustic sound diffuser panels. Design custom panels made of angled wooden blocks, see a real-time 3D preview, and share your designs via URL.
 
-**Live demo**: [dannydulai.github.io/difuser](https://dannydulai.github.io/difuser/)
+**Live demo**: [dannyfiresnake.github.io/difuser](https://dannyfiresnake.github.io/difuser/)
 
 ## What it does
 
